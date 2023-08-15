@@ -4,7 +4,7 @@
     settings = {
       allowed-users = [ "root" "@wheel" ];
       auto-optimise-store = true;
-      experimental-features = [ "nix-command" "flakes" "nix-repl" ]:
+      experimental-features = [ "nix-command" "flakes" "nix-repl" ];
     };
 
     gc = {
@@ -15,6 +15,6 @@
 
     registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
 
-    nixPath = [ "nixpkgs=${input.nixpkgs.outPath}" ];
+    nixPath = [ "nixpkgs=${inputs.nixpkgs.outPath}" ];
   };
 }

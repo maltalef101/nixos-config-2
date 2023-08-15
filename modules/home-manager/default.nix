@@ -1,0 +1,1 @@
+{ fonts = import ./fonts.nix; }

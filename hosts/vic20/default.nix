@@ -9,10 +9,10 @@
     ../common
     ../common/users/maltalef.nix
 
-    ../common/optional/wireless.nix
+    ../common/optional/networkmanager.nix
+    ../common/optional/xserver.nix
+    ../common/optional/pulseaudio.nix
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
-
-  networking = { useDHCP = true; };
 }
