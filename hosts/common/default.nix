@@ -6,7 +6,7 @@
     ./openssh.nix
     ./systemd-boot.nix
     ./doas.nix
-  ] ++ (builtins.attrValues outputs.nixosModules);
+  ];
   
   nixpkgs = {
     # overlays = {};

@@ -1,20 +1,18 @@
-{ pkgs, inputs, ...}: {
+{ pkgs, inputs, ... }: {
   imports = with inputs.hardware.nixosModules; [
-		common-cpu-intel
-	  common-gpu-intel
-		common-pc-ssd
+    common-cpu-intel
+    common-gpu-intel
+    common-pc-ssd
 
-		./hardware-configuration.nix
-		
-		../common/global
-		../common/users/maltalef
+    ./hardware-configuration.nix
 
-		../common/optional/wireless.nix
+    ../common
+    ../common/users/maltalef.nix
+
+    ../common/optional/wireless.nix
   ];
 
-	boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
-	
-	networking = {
-		useDHCP = true;
-  };
+  boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
+
+  networking = { useDHCP = true; };
 }
