@@ -1,19 +1,20 @@
 { inputs, lib, ...}:
 {
-	nix = {
-		settings = {
-			allowed-users = [ "root" "@wheel" ];
-			auto-optimise-store = true;
-			experimental-features = [ "nix-command" "flakes" "nix-repl" ]:
-		};
-		gc = {
-			automatic = true;
-			dates = "weekly";
-			options = "--delete-older-than 2d";
-		};
+  nix = {
+    settings = {
+      allowed-users = [ "root" "@wheel" ];
+      auto-optimise-store = true;
+      experimental-features = [ "nix-command" "flakes" "nix-repl" ]:
+    };
 
-		registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 2d";
+    };
 
-		nixPath = [ "nixpkgs=${input.nixpkgs.outPath}" ];
-	};
+    registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+
+    nixPath = [ "nixpkgs=${input.nixpkgs.outPath}" ];
+  };
 }
