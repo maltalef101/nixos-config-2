@@ -1,12 +1,12 @@
 { inputs, lib, pkgs, config, outputs, ...}:
 let
-  inherit (inputs.nix-colors) colorschemes;
+  inherit (inputs.nix-colors) colorSchemes;
 in
 {
   imports = [
     inputs.nix-colors.homeManagerModule
-    ../features/cli
-  ] ++ (builtins.attrValues outputs.homeManagerModules);
+    ./features/cli
+  ];
 
   nixpkgs = {
     # overlays = { };
@@ -29,5 +29,8 @@ in
     username = lib.mkDefault "maltalef";
     homeDirectory = lib.mkDefault "/home/${config.home.username}";
     stateVersion = lib.mkDefault "22.05";
-  }
+  };
+	
+	colorscheme = lib.mkDefault colorSchemes.gruvbox-dark-hard;
+  home.file.".colorscheme".text = config.colorscheme.slug;
 }

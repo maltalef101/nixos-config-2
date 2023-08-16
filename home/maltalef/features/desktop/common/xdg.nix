@@ -1,5 +1,5 @@
 { pkgs, lib, config, ... }:
-let homeDirectory = config.users.users.maltalef.home;
+let homeDirectory = home.maltalef.homeDirectory;
 in {
   xdg.userDirs = lib.mkDefault {
     enable = true;
