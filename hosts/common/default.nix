@@ -1,4 +1,4 @@
-{ inputs, outputs, ... }: {
+{ pkgs, inputs, outputs, ... }: {
   imports = [
     ./auto-upgrade.nix
     ./locale.nix
@@ -13,7 +13,10 @@
     config = { allowUnfree = true; };
   };
 
-  environment.enableAllTerminfo = true;
+  environment = {
+	enableAllTerminfo = true;
+	systemPackages = [ pkgs.git ];
+  };
 
   security.pam.loginLimits = [
     {
@@ -29,6 +32,8 @@
       value = "1048576";
     }
   ];
+
+  hardware.enableRedistributableFirmware = true;
 
   system.stateVersion = "23.11";
 }

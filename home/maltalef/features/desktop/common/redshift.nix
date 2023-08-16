@@ -5,8 +5,8 @@
     enableVerboseLogging = true;
 
     provider = "manual";
-    latitude = lib.mkDefault - 34.6;
-    longitude = lib.mkDefault - 58.4;
+    latitude = lib.mkDefault "-34.6";
+    longitude = lib.mkDefault "-58.4";
 
     temperature = {
       day = 5500;

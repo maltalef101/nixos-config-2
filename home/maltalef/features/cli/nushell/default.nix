@@ -1,13 +1,17 @@
 { pkgs, ... }: {
   programs.nushell = {
     enable = true;
-    shellAliases = {
-      ls = "^exa";
-      ll = "ls -al";
-      la = "ls -a";
+    shellAliases = rec {
+      ls = "^exa --group-directories-first";
+      ll = "^exa --group-directories-first -al";
+      la = "^exa --group-directories-first -a";
       vim = "^nvim";
-      v = "vim";
+      v = "^nvim";
       dv = "cd ~/dev";
     };
+	
+    configFile.source = ./config/config.nu;
+    envFile.source = ./config/env.nu;
+    loginFile.source = ./config/login.nu;
   };
 }

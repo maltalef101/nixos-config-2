@@ -1,27 +1,12 @@
-{ pkgs, lib, config, ... }: 
-let
-  cfg = {
-    enable = true;
-    monospace = {
-      family = "FiraCode Nerd Font";
-      package = pkgs.nerdfonts.override { fonts = [ "FiraCode" ]; };
-    };
+{ pkgs, lib, ... }: {
+  home.packages = with pkgs; [
+    noto-fonts
+    noto-fonts-cjk
+    noto-fonts-emoji
+    fira-code
+    fira-code-symbols
+    (nerdfonts.override { fonts = [ "FiraCode" ]; })
+  ];
 
-    regular = {
-      family = "Noto Sans";
-      package = pkgs.noto-fonts;
-    };
-  };
-in
-{
-  config = lib.mkIf cfg.enable {
-	fonts.fontconfig.enable = true;
-    home.packages = with pkgs; [
-	  cfg.monospace.package
-  	  cfg.regular.package
-      fira-code-symbols
-      noto-fonts-emoji
-      noto-fonts-cjk
-    ];
-  };
+  fonts.fontconfig.enable = true;
 }
