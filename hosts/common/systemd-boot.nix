@@ -1,11 +1,10 @@
-{ config, lib, pkgs, ...}:
-{
+{ config, lib, pkgs, ...}: {
   boot = {
     cleanTmpDir = true;
-    loader = lib.mkDefault {
+    loader = {
       systemd-boot = { enable = true; editor = false; };
       efi = {
-        canTouchEfiVairables = true;
+        canTouchEfiVariables = true;
         efiSysMountPoint = "/boot/efi";
       };
       timeout = 3;

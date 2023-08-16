@@ -32,15 +32,15 @@
         lib.nixosSystem {
           system = system;
           modules = [
-            { networking.hostname = hostname; }
+            { networking.hostName = hostname; }
             (./. + "/hosts/${hostname}")
-            home-manager.nixosModule.home-manager
+            home-manager.nixosModules.home-manager
 	    {
               home-manager = {
                 useUserPackages = true;
 		useGlobalPkgs = true;
 		extraSpecialArgs = { inherit inputs; };
-		users.maltalef = ( import "./home/maltalef/${hostname}" { inherit inputs lib config; });
+		users.maltalef = ( import (./. + "/home/maltalef/${hostname}.nix") { inherit inputs lib config outputs; });
               };
             }
           ];

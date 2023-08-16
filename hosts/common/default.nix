@@ -1,4 +1,4 @@
-{ inputs, outputs, ...}: {
+{ inputs, outputs, ... }: {
   imports = [
     ./auto-upgrade.nix
     ./locale.nix
@@ -7,13 +7,13 @@
     ./systemd-boot.nix
     ./doas.nix
   ];
-  
+
   nixpkgs = {
     # overlays = {};
-    allowUnfree = true;
+    config = { allowUnfree = true; };
   };
 
-  environment.enableAllTermInfo = true;
+  environment.enableAllTerminfo = true;
 
   security.pam.loginLimits = [
     {
