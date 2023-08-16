@@ -5,7 +5,7 @@ in {
     enable = true;
     profiles.maltalef = {
       bookmarks = { };
-      extensions = with addons; [ ublock-orgin vimium dark-reader sidebery ];
+      extensions = with addons; [ ublock-origin vimium darkreader sidebery ];
 
       settings = {
         "browser.shell.checkDefaultBrowser" = false;
