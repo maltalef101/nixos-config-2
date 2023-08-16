@@ -49,7 +49,6 @@
     in
     {
       inherit lib;
-      homeManagerModules = import ./modules/home-manager;
       packages = forEachSystem (pkgs: import ./pkgs { inherit pkgs; });
       devShells = forEachSystem (pkgs: import ./shell.nix { inherit pkgs; });
 

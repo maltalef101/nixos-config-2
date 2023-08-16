@@ -1,5 +1,6 @@
-{ pkgs, ... }: {
-  fontProfiles = {
+{ pkgs, lib, config, ... }: 
+let
+  cfg = {
     enable = true;
     monospace = {
       family = "FiraCode Nerd Font";
@@ -11,10 +12,16 @@
       package = pkgs.noto-fonts;
     };
   };
-
-  home.packages = with pkgs; [
-    fira-code-symbols
-    noto-fonts-emoji
-    noto-fonts-cjk
-  ];
+in
+{
+  config = lib.mkIf cfg.enable {
+	fonts.fontconfig.enable = true;
+    home.packages = with pkgs; [
+	  cfg.monospace.package
+  	  cfg.regular.package
+      fira-code-symbols
+      noto-fonts-emoji
+      noto-fonts-cjk
+    ];
+  };
 }
