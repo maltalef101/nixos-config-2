@@ -28,7 +28,7 @@ in
   home = {
     username = lib.mkDefault "maltalef";
     homeDirectory = lib.mkDefault "/home/${config.home.username}";
-    stateVersion = lib.mkDefault "22.05";
+    stateVersion = lib.mkDefault "23.11";
   };
 	
 	colorscheme = lib.mkDefault colorSchemes.gruvbox-dark-hard;

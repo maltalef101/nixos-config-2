@@ -9,5 +9,6 @@
     ripgrep # Better (and faster) grep
     fd # Better find
     httpie # Better curl
+    nixfmt # For formatting nix files
   ];
 }

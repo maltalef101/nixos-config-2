@@ -20,7 +20,7 @@
     };
   };
 
-  swapDevices.device = "/dev/disk/by-label/swap";
+  swapDevices = [ { device = "/dev/disk/by-label/swap"; } ];
   nixpkgs.hostPlatform.system = "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = true;
 }

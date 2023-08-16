@@ -4,7 +4,7 @@
     settings = {
       allowed-users = [ "root" "@wheel" ];
       auto-optimise-store = true;
-      experimental-features = [ "nix-command" "flakes" "nix-repl" ];
+      experimental-features = [ "nix-command" "flakes" "repl-flake" ];
     };
 
     gc = {

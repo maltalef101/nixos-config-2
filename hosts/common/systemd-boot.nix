@@ -1,6 +1,6 @@
 { config, lib, pkgs, ...}: {
   boot = {
-    cleanTmpDir = true;
+    tmp.cleanOnBoot = true;
     loader = {
       systemd-boot = { enable = true; editor = false; };
       efi = {
