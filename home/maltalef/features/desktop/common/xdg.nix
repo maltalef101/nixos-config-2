@@ -3,7 +3,7 @@ let homeDirectory = config.home.homeDirectory;
 in {
   xdg.userDirs = lib.mkDefault {
     enable = true;
-	createDirectories = true;
+    createDirectories = true;
     documents = "${homeDirectory}/documents";
     download = "${homeDirectory}/downloads";
     videos = "${homeDirectory}/videos";

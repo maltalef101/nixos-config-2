@@ -1,3 +1,1 @@
-{ pkgs, ... }: {
-	home.packages = with pkgs; [ networkmanagerapplet ];
-}
+{ pkgs, ... }: { home.packages = with pkgs; [ networkmanagerapplet ]; }

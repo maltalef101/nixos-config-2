@@ -12,5 +12,10 @@
     ./alacritty
   ];
 
-  home.packages = with pkgs; [ xclip ];
+  home.packages = with pkgs; [ 
+    xclip
+	pulsemixer
+	python3
+	gcc
+  ];
 }

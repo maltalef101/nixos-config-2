@@ -12,7 +12,20 @@
     ../common/optional/networkmanager.nix
     ../common/optional/xserver.nix
     ../common/optional/pulseaudio.nix
+    ../common/optional/bluetooth.nix
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
+
+  services.xserver.videoDrivers = [ "intel" ];
+  services.xserver.deviceSection = ''
+	Option "DRI" "2"
+	Option "TearFree" "true"
+  '';
+
+  hardware.opengl = {
+    enable = true;
+    driSupport = true;
+    driSupport32Bit = true;
+  };
 }

@@ -10,5 +10,6 @@
     fd # Better find
     httpie # Better curl
     nixfmt # For formatting nix files
+	gnumake
   ];
 }

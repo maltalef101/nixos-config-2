@@ -42,6 +42,8 @@
 (scroll-bar-mode -1)
 (tab-bar-mode 1)
 
+(set-frame-font "FiraCode Nerd Font:pixelsize=14" nil t)
+
 (setq visible-bell t)
 
 (setq-default truncate-lines nil)

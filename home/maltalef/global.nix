@@ -19,6 +19,8 @@ in
       experimental-features = [ "nix-command" "flakes" "repl-flake" ];
     };
   };
+
+  systemd.user.startServices = "sd-switch";
   
   programs = {
     home-manager.enable = true;
