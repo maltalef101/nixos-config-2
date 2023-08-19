@@ -1,15 +1,16 @@
 { pkgs, ... }: {
   imports = [
-    ./startx
-    ./network.nix
+	./unclutter.nix
+    ./alacritty
     ./dragon.nix
-    ./firefox.nix
     ./dunst.nix
+    ./firefox.nix
     ./font.nix
+    ./network.nix
     ./redshift.nix
     ./rofi.nix
+    ./startx
     ./xdg.nix
-    ./alacritty
   ];
 
   home.packages = with pkgs; [ 

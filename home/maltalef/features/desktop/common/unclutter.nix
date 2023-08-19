@@ -1,10 +1,9 @@
 {
 	services.unclutter = {
 		enable = true;
-		timeout = 0.8;
+		timeout = 1;
 		threshold = 11;
-		extraOpions = [
-			"exclude-root"
+		extraOptions = [
 			"ignore-scroling"
 		];
 	};

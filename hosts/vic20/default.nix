@@ -11,6 +11,7 @@
 
     ../common/optional/networkmanager.nix
     ../common/optional/xserver.nix
+	../common/optional/greetd.nix
     ../common/optional/pulseaudio.nix
     ../common/optional/bluetooth.nix
   ];

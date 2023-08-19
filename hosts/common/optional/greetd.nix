@@ -1,13 +1,13 @@
 { pkgs, lib, ... }:
 let
   commands = {
-    shutdown = lib.mkDefault "${pkgs.systemd}/bin/systemctl shutdown";
-    reboot = lib.mkDefault "reboot";
+    shutdown = "${pkgs.systemd}/bin/systemctl shutdown";
+    reboot = "reboot";
   };
 in {
   services.greetd = {
     enable = true;
-    settings.default_session.command = lib.mkDefault ''
-      ${pkgs.greetd.tuigreet}/bin/tuigreet --time --rememeber-session --power-shutdown "${commands.shutdown}" --power-reboot "${commands.reboot}"'';
+    settings.default_session.command = ''
+      ${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember-session --power-shutdown "${commands.shutdown}" --power-reboot "${commands.reboot}"'';
   };
 }
