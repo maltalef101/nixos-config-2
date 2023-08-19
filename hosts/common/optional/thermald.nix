@@ -1,0 +1,3 @@
+{
+  sevices.thermald.enable = true;
+}
