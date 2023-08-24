@@ -14,6 +14,9 @@
 	../common/optional/greetd.nix
     ../common/optional/pulseaudio.nix
     ../common/optional/bluetooth.nix
+	../common/optional/gamemode.nix
+	../common/optional/auto-cpufreq.nix
+	../common/optional/thermald.nix
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
@@ -24,9 +27,16 @@
 	Option "TearFree" "true"
   '';
 
+  programs.dconf.enable = true;
+
   hardware.opengl = {
     enable = true;
     driSupport = true;
     driSupport32Bit = true;
+  };
+
+  services.logind = {
+	  lidSwitchDocked = "ignore";
+	  lidSwitchExternalPower = "ignore";
   };
 }
