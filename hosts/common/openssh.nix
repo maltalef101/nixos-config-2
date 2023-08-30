@@ -1,5 +1,9 @@
 { outputs, lib, config, ... }:
-{
+let 
+  inherit (config.networking) hostName;
+  hosts = outputs.nixosConfigurations;
+  pubKey = host: ../${host}/ssh_host_ed25519_key.pub;
+in {
   services.openssh = {
     enable = lib.mkDefault true;
     settings = {
@@ -7,10 +11,25 @@
       PermitRootLogin = "no";
       StreamLocalBindUnlink = "yes";
     };
+
+    hostKeys = [{
+      path = "/etc/ssh/ssh_host_ed25519_key";
+      type = "ed25519";
+    }];
   };
   
-  # TODO: put the public keys of each host in the knownHosts
-  #  (probably need secrets)
-  # programs.ssh = { };
+  programs.ssh = {
+    # Each hosts public key
+    knownHosts = builtins.mapAttrs
+      (name: _: {
+        publicKeyFile = pubKey name;
+        extraHostNames =
+          (lib.optional (name == hostName) "localhost"); # Alias for localhost if it's the same host
+      })
+      hosts;
+  };
+
+  # Passwordless sudo when SSH'ing with keys
+  security.pam.enableSSHAgentAuth = true;
 }
   

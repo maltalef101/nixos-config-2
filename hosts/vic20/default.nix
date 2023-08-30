@@ -7,7 +7,7 @@
     ./hardware-configuration.nix
 
     ../common
-    ../common/users/maltalef.nix
+    ../common/users/maltalef
 
     ../common/optional/networkmanager.nix
     ../common/optional/xserver.nix
