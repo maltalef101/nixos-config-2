@@ -1,7 +1,7 @@
 { pkgs, config, ... }: {
   users.users.maltalef = {
     isNormalUser = true;
-    shell = pkgs.nushell;
+    shell = pkgs.bash;
     extraGroups = [ "wheel" "video" "audio" ];
   };
 
