@@ -1,5 +1,6 @@
 { pkgs, ... }: {
   imports = [
+	./maim.nix
 	./unclutter.nix
     ./alacritty
     ./dragon.nix
