@@ -1,3 +1,4 @@
 { pkgs ? import <nixpkgs> { } }: rec {
-	# package = pkgs.callPackage ./path/to/package.nix { };
+	maimfull = pkgs.callPackage ./scripts/maimsel { };
+	maimsel = pkgs.callPackage ./scripts/maimfull { };
 }
