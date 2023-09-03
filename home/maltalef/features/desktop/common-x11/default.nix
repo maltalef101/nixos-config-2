@@ -1,6 +1,5 @@
 { pkgs, ... }: {
   imports = [
-	./maim.nix
 	./unclutter.nix
     ./alacritty
     ./dragon.nix
@@ -10,7 +9,6 @@
     ./network.nix
     ./redshift.nix
     ./rofi.nix
-    ./startx
     ./xdg.nix
   ];
 
@@ -19,5 +17,10 @@
 	pulsemixer
 	python3
 	gcc
+	maim
+
+	# personal helper scripts
+	maimsel
+	maimfull
   ];
 }

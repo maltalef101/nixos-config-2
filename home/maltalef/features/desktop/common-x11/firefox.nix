@@ -7,6 +7,7 @@ in {
       bookmarks = { };
       extensions = with addons; [ ublock-origin vimium darkreader sidebery ];
 	  search.default = "DuckDuckGo";
+	  search.force = true;
 	  
       settings = {
 		"browser.aboutConfig.showWarning" = false;
