@@ -1,8 +1,11 @@
-{
-  programs.emacs.enable = true;
+{ pkgs, ... }: {
+  programs.emacs = {
+    package = pkgs.emacs29;
+    enable = true;
+  };
 
   xdg.configFile."emacs" = {
     source = ./config;
-	recursive = true;
+    recursive = true;
   };
 }
