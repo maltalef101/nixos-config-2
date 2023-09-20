@@ -23,7 +23,6 @@
     let
       inherit (self) outputs;
       lib = nixpkgs.lib // home-manager.lib;
-      config = config;
       # This could be expanded to multiple architectures when that comes to need.
       systems = [ "x86_64-linux" ];
       forEachSystem = f: lib.genAttrs systems (sys: f pkgsFor.${sys});
@@ -44,7 +43,7 @@
                 extraSpecialArgs = { inherit inputs; };
                 users.maltalef =
                   (import (./. + "/home/maltalef/${hostname}.nix") {
-                    inherit inputs lib config outputs;
+                    inherit inputs lib outputs;
                   });
               };
             }
@@ -53,7 +52,7 @@
         };
     in {
       inherit lib;
-	  overlays = import ./overlays { inherit inputs outputs; };
+	    overlays = import ./overlays { inherit inputs outputs; };
 
       packages = forEachSystem (pkgs: import ./pkgs { inherit pkgs; });
       devShells = forEachSystem (pkgs: import ./shell.nix { inherit pkgs; });
