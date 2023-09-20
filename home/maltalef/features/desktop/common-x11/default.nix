@@ -6,7 +6,6 @@
     ./dunst.nix
     ./firefox.nix
     ./font.nix
-    ./network.nix
     ./redshift.nix
     ./rofi.nix
     ./xdg.nix
