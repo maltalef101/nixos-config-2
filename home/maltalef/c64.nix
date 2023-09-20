@@ -1,4 +1,4 @@
-{ inputs, outputs, config, lib, ... }: {
+{ inputs, outputs, lib, ... }: {
   imports = [
     ./global.nix
     ./features/desktop/leftwm
@@ -10,7 +10,7 @@
   ];
 
   systemd.user.tmpfiles.rules = [
-    "L ${config.home.homeDirectory}/storage - - - - /var/lib/mount/storage"
-	  "L ${config.home.homeDirectory}/music - - - - /var/lib/mount/storage/00music/hifi"
+    "L %h/storage - - - - /var/lib/mount/storage"
+	"L %h/music - - - - /var/lib/mount/storage/00music/hifi"
   ];
 }
