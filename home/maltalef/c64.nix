@@ -8,4 +8,9 @@
 
     ./features/asap # werk
   ];
+
+  systemd.user.tmpfiles.rules = [
+    "L ${config.home.homeDirectory}/storage - - - - /var/lib/mount/storage"
+	  "L ${config.home.homeDirectory}/music - - - - /var/lib/mount/storage/00music/hifi"
+  ];
 }
