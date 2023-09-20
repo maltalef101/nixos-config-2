@@ -7,7 +7,7 @@
 filename="$(date "+%s").png"
 savedir="$HOME/pictures/00screenshots/$(date "+%m-%Y")"
 
-[ -d "$savedir" ] || mkdir -p $savedir
+[ -d "$savedir" ] || mkdir -p "$savedir"
 
 maim -u -f png -m 5 "$savedir/$filename"
 xclip "$savedir/$filename" -selection clipboard -t image/png

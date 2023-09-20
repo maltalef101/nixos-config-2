@@ -6,6 +6,7 @@
 
     hardware.url = "github:nixos/nixos-hardware";
     nix-colors.url = "github:misterio77/nix-colors";
+    sops-nix.url = "github:mic92/sops-nix";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -18,7 +19,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
     let
       inherit (self) outputs;
       lib = nixpkgs.lib // home-manager.lib;
@@ -35,20 +36,25 @@
             { networking.hostName = hostname; }
             (./. + "/hosts/${hostname}")
             home-manager.nixosModules.home-manager
-	    {
+            sops-nix.nixosModules.sops
+            {
               home-manager = {
                 useUserPackages = true;
-		useGlobalPkgs = true;
-		extraSpecialArgs = { inherit inputs; };
-		users.maltalef = ( import (./. + "/home/maltalef/${hostname}.nix") { inherit inputs lib config outputs; });
+                useGlobalPkgs = true;
+                extraSpecialArgs = { inherit inputs; };
+                users.maltalef =
+                  (import (./. + "/home/maltalef/${hostname}.nix") {
+                    inherit inputs lib config outputs;
+                  });
               };
             }
           ];
-	  specialArgs = { inherit inputs; };
+          specialArgs = { inherit inputs outputs; };
         };
-    in
-    {
+    in {
       inherit lib;
+	  overlays = import ./overlays { inherit inputs outputs; };
+
       packages = forEachSystem (pkgs: import ./pkgs { inherit pkgs; });
       devShells = forEachSystem (pkgs: import ./shell.nix { inherit pkgs; });
 

@@ -1,6 +1,7 @@
 { pkgs, ... }: {
 	imports = [
-	  ../common
+	  ../common-x11
+	  ./startx
 	];
 
 	home.packages = with pkgs; [ leftwm polybar ];
@@ -11,9 +12,6 @@
 
 	xsession = {
 		enable = true;
-		windowManager.command = ''
-			${pkgs.leftwm}/bin/leftwm &
-			waitPID=$!
-		'';
+		windowManager.command = "${pkgs.leftwm}/bin/leftwm";
 	};
 }

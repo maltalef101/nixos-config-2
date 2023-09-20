@@ -1,7 +1,0 @@
-alacritty \
-    --class VolumeFloat \
-    --option "window.position.x = 0" \
-    --option "window.position.y = 0" \
-    --option "window.columns = 50" \
-    --option "window.lines = 40" \
-    -e pulsemixer

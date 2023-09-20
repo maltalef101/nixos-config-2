@@ -11,9 +11,6 @@ ln -s $SCRIPTPATH/down /tmp/leftwm-theme-down
 #set the theme.ron config
 leftwm-command "LoadTheme $SCRIPTPATH/theme.ron"
 
-#set background
-setbg
-
 index=0
 monitors="$(polybar -m | sed s/:.*//)"
 leftwm-state -q -n -t $SCRIPTPATH/sizes.liquid | sed -r '/^\s*$/d' | while read -r width x y

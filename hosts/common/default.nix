@@ -6,10 +6,11 @@
     ./openssh.nix
     ./systemd-boot.nix
     ./doas.nix
+    ./sops.nix
   ];
 
   nixpkgs = {
-    # overlays = {};
+    overlays = builtins.attrValues outputs.overlays;
     config = { allowUnfree = true; };
   };
 

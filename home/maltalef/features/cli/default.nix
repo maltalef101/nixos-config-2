@@ -1,5 +1,5 @@
-{ pkgs, ... }: {
-  imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ];
+{ pkgs, config, lib, ... }: {
+  imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
 
   home.packages = with pkgs; [
     bc # Calclator
@@ -12,4 +12,6 @@
     nixfmt # For formatting nix files
 	bandwhich # Bandwidth utilization tool
   ];
+
+  programs.bash.enable = true;
 }

@@ -100,6 +100,9 @@
 (setq-default tab-width 4)
 (setq-default evil-shift-width tab-width) ;; Use with '<' and '>' keys
 
+;; wrap at 80 cols
+(setq-default fill-column 80)
+
 ;; Parens
 (show-paren-mode)
 (electric-pair-mode)
@@ -139,9 +142,7 @@
 (use-package rainbow-delimiters
   :hook (prog-mode. rainbow-delimiters-mode))
 
-(use-package unicode-fonts
-  :config
-  (unicode-fonts-setup))
+(use-package unicode-fonts)
 
 (use-package doom-themes
   :init
@@ -156,15 +157,30 @@
 
 (use-package org
     :mode (("\\.org$" . org-mode))
-    :ensure org-plus-contrib
 	:hook (org-mode . memacs/org-latex-snippets))
+(add-hook 'org-mode-hook #'auto-fill-mode)
 
-(use-package tex
-	:ensure nil
-	:init
-	(setq TeX-auto-save t)
-	(setq TeX-parse-self t)
-	)
+
+(setq org-directory (concat (getenv "XDG_DOCUMENTS_DIR") "/org-roam/"))
+(use-package org-roam
+  :custom
+  (org-roam-directory (file-truename org-directory))
+  (org-roam-db-autosync-mode)
+  :bind (("C-c n f" . org-roam-node-find)
+         ("C-c n r" . org-roam-node-random)
+         (:map org-mode-map
+               (("C-c n i" . org-roam-node-insert)
+                ("C-c n o" . org-id-get-create)
+                ("C-c n t" . org-roam-tag-add)
+                ("C-c n a" . org-roam-alias-add)
+                ("C-c n l" . org-roam-buffer-toggle)))))
+
+;; (use-package tex
+;; 	:ensure nil
+;; 	:init
+;; 	(setq TeX-auto-save t)
+;; 	(setq TeX-parse-self t)
+;; 	)
 
 (use-package evil
   :init
@@ -304,9 +320,9 @@
   :custom ((dired-listing-switches "-agoh --group-directories-first"))
   :config
   (evil-collection-define-key 'normal 'dired-mode-map
-    "h" 'dired-single-up-directory
-    "l" 'dired-single-buffer
-    "RET" 'dired-single-buffer
+    (kbd "h") 'dired-single-up-directory
+    (kbd "l") 'dired-single-buffer
+    (kbd "RET") 'dired-single-buffer
     [remap dired-find-file] 'dired-single-buffer
     [remap dired-up-directory] 'dired-single-up-directory))
 
