@@ -3,11 +3,13 @@ keys:
     - &maltalef: 28A2DC734DF29417811F71D38750493C6AE069C7
   - &hosts:
     - &vic20: age13mpl3lxuelv5fededc66ppv9g8sy4lqpc7p2u3uf0rr9gqy2l5yqflfnl6
+    - &c64: age1z49lwfkr6088h2cfhy0hjpljzaf2zwdzwqp3jq6lcza7ypjxeg8qzsw0r0
 
 creation_rules:
   - path_regex: hosts/common/secrets.ya?ml$
     key_groups:
     - age:
       - *vic20
+      - *c64
       pgp:
       - *maltalef
