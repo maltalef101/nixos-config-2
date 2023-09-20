@@ -5,7 +5,7 @@
     bc # Calclator
     bottom # System resource viewer
     ncdu # Nicer disk usage
-    exa # Better ls
+    eza # Better ls
     ripgrep # Better (and faster) grep
     fd # Better find
     httpie # Better curl

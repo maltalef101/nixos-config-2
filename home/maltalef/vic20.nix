@@ -1,4 +1,4 @@
-{ inputs, outputs, config, lib, ... }: {
+{ inputs, outputs, lib, ... }: {
   imports = [
     ./global.nix
     ./features/desktop/leftwm

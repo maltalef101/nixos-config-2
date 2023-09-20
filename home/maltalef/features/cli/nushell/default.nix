@@ -2,9 +2,9 @@
   programs.nushell = {
     enable = true;
     shellAliases = rec {
-      ls = "^exa --group-directories-first";
-      ll = "^exa --group-directories-first -al";
-      la = "^exa --group-directories-first -a";
+      ls = "^eza --group-directories-first";
+      ll = "^eza --group-directories-first -al";
+      la = "^eza --group-directories-first -a";
       vim = "^nvim";
       v = "^nvim";
       dv = "cd ~/dev";
