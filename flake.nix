@@ -60,7 +60,7 @@
 
       nixosConfigurations = {
         # Main desktop
-        # c64 = mkSystem "x86_64-linux" "c64";
+        c64 = mkSystem "x86_64-linux" "c64";
         # Laptop (Positivo BGH)
         # c128 = mkSystem "x86_64-linux" "c128";
         # Laptop (Dell Latitude 5480 Intel 7th gen)
