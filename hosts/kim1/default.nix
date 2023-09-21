@@ -1,8 +1,8 @@
 { pkgs, inputs, ... }: {
   imports = with inputs.hardware.nixosModules; [
     common-cpu-amd
-    common-gpu-amd
-    common-pc-ssd
+    common-gpu-nvidia
+    common-pc-hdd
 
     ./hardware-configuration.nix
 
@@ -11,7 +11,6 @@
 
     ../common/optional/auto-cpufreq.nix
     ../common/optional/thermald.nix
-    ../common/optional/xserver.nix
   ];
 
   boot.kernelPackages = pkgs.linuxLatest;
