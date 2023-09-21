@@ -64,6 +64,8 @@
         # c128 = mkSystem "x86_64-linux" "c128";
         # Laptop (Dell Latitude 5480 Intel 7th gen)
         vic20 = mkSystem "x86_64-linux" "vic20";
+		# Home server (Old Phenom II X4 945, 2Gb RAM)
+		kim1 = mkSystem "x86_64-linux" "kim1";
       };
     };
 }
