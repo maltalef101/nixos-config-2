@@ -13,6 +13,7 @@
 	  ../common/optional/gamemode.nix
 	  ../common/optional/greetd.nix
 	  ../common/optional/thermald.nix
+	  ../common/optional/systemd-boot.nix
     ../common/optional/pipewire.nix
     ../common/optional/xserver.nix
   ];

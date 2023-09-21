@@ -6,7 +6,7 @@
     extraGroups = [ "wheel" "video" "audio" ];
 
 	  openssh.authorizedKeys.keys = [ (builtins.readFile ../../../../home/maltalef/ssh.pub) ];
-	  password = (builtins.readFile config.sops.secrets.maltalef-password.path);
+	  # password = (builtins.readFile config.sops.secrets.maltalef-password.path);
   };
 
   sops.secrets.maltalef-password = {

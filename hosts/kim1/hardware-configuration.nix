@@ -7,6 +7,7 @@
     };
     kernelModules = [ "kvm-amd" ];
 	extraModulePackages = [ ];
+	grub.device = "/dev/sda";
   };
 
   fileSystems = {

@@ -9,11 +9,12 @@
     ../common
     ../common/users/maltalef
 
-	  ../common/optional/auto-cpufreq.nix
-	  ../common/optional/brightness.nix
-	  ../common/optional/gamemode.nix
-	  ../common/optional/greetd.nix
-	  ../common/optional/thermald.nix
+	../common/optional/auto-cpufreq.nix
+	../common/optional/brightness.nix
+	../common/optional/gamemode.nix
+	../common/optional/greetd.nix
+	../common/optional/thermald.nix
+	../common/optional/systemd-boot.nix
     ../common/optional/bluetooth.nix
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix

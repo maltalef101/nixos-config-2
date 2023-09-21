@@ -4,7 +4,6 @@
     ./locale.nix
     ./nix.nix
     ./openssh.nix
-    ./systemd-boot.nix
     ./doas.nix
     ./sops.nix
   ];
