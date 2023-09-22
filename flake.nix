@@ -17,6 +17,11 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+	nix-minecraft = {
+	  url = "github:Infinidoge/nix-minecraft";
+	  inputs.nixpkgs.follows = "nixpkgs";
+	};
   };
 
   outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:

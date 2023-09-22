@@ -5,6 +5,7 @@
     common-pc-hdd
 
     ./hardware-configuration.nix
+	./services
 
     ../common
     ../common/users/maltalef
