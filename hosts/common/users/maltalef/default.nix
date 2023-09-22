@@ -1,5 +1,5 @@
 { pkgs, config, ... }: {
-  users.mutableUsers = false;
+  users.mutableUsers = true;
   users.users.maltalef = {
     isNormalUser = true;
     shell = pkgs.bash;
@@ -9,10 +9,10 @@
 	  # password = (builtins.readFile config.sops.secrets.maltalef-password.path);
   };
 
-  sops.secrets.maltalef-password = {
-    sopsFile = ../../secrets.yaml;
-    neededForUsers = true;
-  };
+  #sops.secrets.maltalef-password = {
+  #  sopsFile = ../../secrets.yaml;
+  #  neededForUsers = true;
+  #};
 
   services.geoclue2.enable = true;
 }
