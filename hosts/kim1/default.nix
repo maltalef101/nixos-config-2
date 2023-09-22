@@ -14,5 +14,7 @@
     ../common/optional/thermald.nix
   ];
 
+  nix.settings.auto-optimise-store = false;
+
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
 }
