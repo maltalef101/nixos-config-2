@@ -25,6 +25,7 @@ in {
 		"extensions.activeThemeID" = "firefox-compact-dark@mozilla.org";
         "privacy.trackingprotection.enabled" = true;
         "signon.rememberSignon" = false;
+		"browser.low_commit_space_threshold_percent" = 75;
       };
 
 	  userChrome = ''
