@@ -9,6 +9,7 @@
     ./redshift.nix
     ./rofi.nix
     ./xdg.nix
+	./zathura.nix
   ];
 
   home.packages = with pkgs; [ 
@@ -17,6 +18,7 @@
 	python3
 	gcc
 	maim
+	mpv
 
 	# personal helper scripts
 	maimsel
