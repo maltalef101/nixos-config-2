@@ -5,6 +5,7 @@
     ./features/desktop/common-x11/optional/piper.nix
     ./features/emacs
     ./features/games
+	./features/tex
 
     ./features/asap # werk
   ];
