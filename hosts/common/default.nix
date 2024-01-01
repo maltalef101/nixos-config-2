@@ -17,6 +17,7 @@
   environment = {
 	enableAllTerminfo = true;
 	systemPackages = [ pkgs.git ];
+	pathsToLink = [ "/share/zsh" ]; # for zsh completion
   };
 
   security.pam.loginLimits = [

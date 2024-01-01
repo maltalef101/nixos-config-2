@@ -1,5 +1,6 @@
 { pkgs, config, lib, ... }: {
   imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
+  # imports = [ ./git.nix ./ssh.nix ./zsh ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
 
   home.packages = with pkgs; [
     bc # Calclator
