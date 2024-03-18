@@ -21,7 +21,6 @@
 
   environment.systemPackages = with pkgs; [
     vulkan-loader
-    vulkan-validation-layers
     vulkan-tools
   ];
 
@@ -34,8 +33,9 @@
   hardware = {
     nvidia = {
       nvidiaSettings = true;
-      powerManagement.enable = true;
+      modesetting.enable = true;
       forceFullCompositionPipeline = true;
+      prime.offload.enable = false;
     };
 
     opengl = {

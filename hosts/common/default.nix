@@ -37,5 +37,8 @@
 
   hardware.enableRedistributableFirmware = true;
 
+  # FUCK MY ISP FOR BLOCKING TPB
+  networking.nameservers = [ "1.1.1.1" "1.0.0.1" "8.8.8.8" "8.8.4.4" ];
+
   system.stateVersion = "23.11";
 }
