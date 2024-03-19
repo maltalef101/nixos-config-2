@@ -10,6 +10,7 @@ in {
       PasswordAuthentication = false;
       PermitRootLogin = "no";
       StreamLocalBindUnlink = "yes";
+	  LogLevel = "DEBUG";
     };
 
     hostKeys = [{
@@ -30,6 +31,6 @@ in {
   };
 
   # Passwordless sudo when SSH'ing with keys
-  security.pam.enableSSHAgentAuth = true;
+  security.pam.sshAgentAuth.enable = true;
 }
   
