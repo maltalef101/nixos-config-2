@@ -1,11 +1,13 @@
 { lib, ...}: {
   services.xserver = {
 		enable = true;
-		layout = lib.mkDefault "es";
 		autoRepeatDelay = lib.mkDefault 160;
 		autoRepeatInterval = lib.mkDefault 50;
 		displayManager.startx.enable = true;
-		xkbOptions = lib.mkDefault "caps:swapescape";
+		xkb = {
+			options = lib.mkDefault "caps:swapescape";
+			layout = lib.mkDefault "es";
+		};
 		
 		libinput.mouse = {
 			accelProfile = "flat";
