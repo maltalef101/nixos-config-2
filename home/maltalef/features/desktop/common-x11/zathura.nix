@@ -1,5 +1,5 @@
 { pkgs, lib, inputs, ... }: {
-  programs.firefox = {
+  programs.zathura = {
     enable = true;
     options = {
       statusbar-h-padding = 0;
@@ -18,7 +18,7 @@
       J = "zoom out";
       i = "recolor";
       p = "print";
-    }
+    };
   };
 
   xdg.mimeApps.defaultApplications = {
