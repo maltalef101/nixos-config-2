@@ -6,6 +6,7 @@
     ./features/desktop/common-x11/optional/network.nix
     ./features/emacs
     ./features/games
+	./features/tex
 
     ./features/asap # werk
   ];
