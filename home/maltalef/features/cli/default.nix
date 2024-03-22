@@ -12,6 +12,7 @@
     httpie # Better curl
     nixfmt # For formatting nix files
 	bandwhich # Bandwidth utilization tool
+	bluetuith # bluetooth connection manager (could be configured, but default is fine)
   ];
 
   programs.bash.enable = true;
