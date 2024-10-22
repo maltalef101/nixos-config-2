@@ -4,7 +4,7 @@
 	systemd.user.services = {
 		birdtray = {
 			Install = {
-				WantedBy = "graphical-session.target";
+				WantedBy = [ "graphical-session.target" ];
 			};
 
 			Service = {
@@ -16,7 +16,7 @@
 			Unit = {
 				After = "graphical-session-pre.target";
 				Description = "Free system tray notification for new mail for Thunderbird.";
-				Documentation = "https://github.com/gyunaev/birdtray";
+				Documentation = [ "https://github.com/gyunaev/birdtray" ];
 				PartOf = "graphical-session.target";
 			};
 		};

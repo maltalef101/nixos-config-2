@@ -5,8 +5,8 @@
 	terminal = "${pkgs.alacritty}/bin/alacritty";
 
 	extraConfig = {
-		show-icons = "true";
-		sidebar-mode = "true";
+		show-icons = true;
+		sidebar-mode = true;
 	};
   };
 }

@@ -16,7 +16,7 @@
     settings.redshift = {
       adjustment-method = "randr";
       fade = 1;
-      gamma-night = 0.95;
+      gamma-night = 0.90;
     };
   };
 }
