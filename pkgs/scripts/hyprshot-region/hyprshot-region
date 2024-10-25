@@ -1,0 +1,8 @@
+#!/bin/sh
+
+filename="$(date "+%s").png"
+savedir="$HOME/pictures/00screenshots/$(date "+%m-%Y")"
+
+[ -d "$savedir" ] || mkdir -p "$savedir"
+
+hyprshot -m region -f $filename -o $savedir
