@@ -2,8 +2,8 @@
   users.mutableUsers = true;
   users.users.maltalef = {
     isNormalUser = true;
-    extraGroups = [ "wheel" "video" "audio" ];
     shell = pkgs.zsh;
+    extraGroups = [ "wheel" "video" "audio" "networkmanager" "nm-openvpn" "libvirtd" ];
 
 	  openssh.authorizedKeys.keys = [ (builtins.readFile ../../../../home/maltalef/ssh.pub) ];
 	 # passwordFile = config.sops.secrets.maltalef-password.path;
@@ -20,4 +20,7 @@
 	  enableCompletion = false;
 	  enable = true;
   };
+
+  virtualisation.libvirtd.enable = true;
+  programs.virt-manager.enable = true;
 }
