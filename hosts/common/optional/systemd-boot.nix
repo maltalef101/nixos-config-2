@@ -2,7 +2,7 @@
   boot = {
     tmp.cleanOnBoot = true;
     loader = {
-      systemd-boot = { enable = true; editor = false; };
+      systemd-boot = { enable = true; editor = true; };
       efi = {
         canTouchEfiVariables = true;
         efiSysMountPoint = "/boot/efi";
