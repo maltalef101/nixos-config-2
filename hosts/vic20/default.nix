@@ -19,6 +19,7 @@
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix
     ../common/optional/xserver.nix
+	../common/optional/hyprland.nix
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
