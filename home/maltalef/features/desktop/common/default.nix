@@ -26,7 +26,7 @@
 	thunderbird
 
 	# personal helper scripts
-	maimsel
-	maimfull
+	hyprshot-full
+	hyprshot-region
   ];
 }
