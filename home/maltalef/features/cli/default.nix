@@ -1,6 +1,6 @@
 { pkgs, config, lib, ... }: {
-  imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
-  # imports = [ ./git.nix ./ssh.nix ./zsh ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
+  # imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
+  imports = [ ./git.nix ./ssh.nix ./zsh ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
 
   home.packages = with pkgs; [
     bc # Calclator
@@ -13,6 +13,12 @@
     nixfmt # For formatting nix files
 	bandwhich # Bandwidth utilization tool
 	bluetuith # bluetooth connection manager (could be configured, but default is fine)
+	whois
+	file
+	wget
+	unzip
+	dosfstools
+	usbutils
   ];
 
   programs.bash.enable = true;
