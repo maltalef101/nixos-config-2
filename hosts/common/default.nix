@@ -32,6 +32,18 @@
       type = "hard";
       value = "1048576";
     }
+	{
+	  domain = "@wheel";
+	  item = "memlock";
+	  type = "hard";
+	  value = "unlimited";
+	}
+	{
+	  domain = "@wheel";
+	  item = "memlock";
+	  type = "soft";
+	  value = "unlimited";
+	}
   ];
 
   hardware.enableRedistributableFirmware = true;
