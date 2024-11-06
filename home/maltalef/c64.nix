@@ -2,12 +2,10 @@
   imports = [
     ./global.nix
     ./features/desktop/leftwm
-    ./features/desktop/common-x11/optional/piper.nix
+    ./features/desktop/common/optional/piper.nix
     ./features/emacs
     ./features/games
 	./features/tex
-
-    ./features/asap # werk
   ];
 
   systemd.user.tmpfiles.rules = [
