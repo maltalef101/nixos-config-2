@@ -1,6 +1,6 @@
 { pkgs, ... }: {
 	imports = [
-	  ../common-x11
+	  ../common
 	  ./startx
 	];
 
