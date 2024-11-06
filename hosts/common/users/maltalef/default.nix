@@ -2,8 +2,8 @@
   users.mutableUsers = true;
   users.users.maltalef = {
     isNormalUser = true;
-    shell = pkgs.bash;
     extraGroups = [ "wheel" "video" "audio" ];
+    shell = pkgs.zsh;
 
 	  openssh.authorizedKeys.keys = [ (builtins.readFile ../../../../home/maltalef/ssh.pub) ];
 	 # passwordFile = config.sops.secrets.maltalef-password.path;
@@ -15,4 +15,9 @@
   # };
 
   services.geoclue2.enable = true;
+
+  programs.zsh = {
+	  enableCompletion = false;
+	  enable = true;
+  };
 }
