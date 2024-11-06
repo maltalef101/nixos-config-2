@@ -2,14 +2,15 @@
   description = "maltalef's NixOS configuration.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/staging-next";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+	nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     hardware.url = "github:nixos/nixos-hardware";
     nix-colors.url = "github:misterio77/nix-colors";
     sops-nix.url = "github:mic92/sops-nix";
 
     home-manager = {
-      url = "github:nix-community/home-manager";
+      url = "github:nix-community/home-manager/release-24.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -17,6 +18,28 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+	aquamarine = {
+		type = "git";
+		url = "https://github.com/hyprwm/aquamarine";
+		ref = "refs/tags/v0.4.3";
+		submodules = true;
+		inputs.nixpkgs.follows = "nixpkgs-unstable";
+	};
+
+	hyprland = {
+		type = "git";
+		url = "https://github.com/hyprwm/Hyprland";
+		ref = "refs/tags/v0.42.0";
+		submodules = true;
+		inputs.nixpkgs.follows = "nixpkgs";
+		#inputs.aquamarine.follows = "aquamarine";
+	};
+
+	hyprlock = {
+		url = "github:hyprwm/hyprlock";
+		inputs.nixpkgs.follows = "nixpkgs";
+	};
 
 	nix-gaming.url = "github:fufexan/nix-gaming";
 	nix-minecraft = {
