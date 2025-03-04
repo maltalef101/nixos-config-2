@@ -2,7 +2,8 @@
   description = "maltalef's NixOS configuration.";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+    #nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
+	nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 	nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     hardware.url = "github:nixos/nixos-hardware";
@@ -10,7 +11,7 @@
     sops-nix.url = "github:mic92/sops-nix";
 
     home-manager = {
-      url = "github:nix-community/home-manager/release-24.05";
+      url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -19,21 +20,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-	aquamarine = {
-		type = "git";
-		url = "https://github.com/hyprwm/aquamarine";
-		ref = "refs/tags/v0.4.3";
-		submodules = true;
-		inputs.nixpkgs.follows = "nixpkgs-unstable";
-	};
-
 	hyprland = {
 		type = "git";
 		url = "https://github.com/hyprwm/Hyprland";
-		ref = "refs/tags/v0.42.0";
+		ref = "refs/tags/v0.47.2";
 		submodules = true;
 		inputs.nixpkgs.follows = "nixpkgs";
-		#inputs.aquamarine.follows = "aquamarine";
 	};
 
 	hyprlock = {
