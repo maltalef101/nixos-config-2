@@ -22,7 +22,6 @@
 	};
 
 	wayland.windowManager.hyprland = {
-		package = pkgs.hyprland-patched;
 		enable = true;
 		xwayland.enable = true;
 
@@ -133,6 +132,7 @@
 				"$mod, space, togglefloating"
 				"$mod, q, killactive"
 				"$mod, Tab, workspace, previous"
+				"$mod, f, fullscreen"
 
 				"$mod, j, cyclenext, prev"
 				"$mod, k, cyclenext"

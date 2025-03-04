@@ -20,7 +20,6 @@
 				aquamarine = inputs.hyprland.inputs.aquamarine.packages.${prev.system}.aquamarine.override {
 					libinput = libinput;
 				};
-				wayland-scanner = final.unstable.wayland-scanner;
 			};
 	};
 

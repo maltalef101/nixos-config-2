@@ -9,4 +9,16 @@
     ./features/games
 	./features/tex
   ];
+
+  wayland.windowManager.hyprland = {
+	  settings = {
+			device = [
+				{
+					name = "genius-wireless-device-1"; 
+					accel_profile = "flat";
+					sensitivity = -0.36;
+				}
+			];
+	  };
+  };
 }
