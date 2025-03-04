@@ -18,7 +18,6 @@
     ../common/optional/bluetooth.nix
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix
-    ../common/optional/xserver.nix
 	../common/optional/hyprland.nix
   ];
 
