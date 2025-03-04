@@ -26,6 +26,7 @@ in {
         "privacy.trackingprotection.enabled" = true;
         "signon.rememberSignon" = false;
 		"browser.low_commit_space_threshold_percent" = 75;
+		"layout.css.devPixelsPerPx" = 0.95;
       };
 
 	  userChrome = ''
