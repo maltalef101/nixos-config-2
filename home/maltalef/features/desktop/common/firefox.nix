@@ -5,7 +5,7 @@ in {
     enable = true;
     profiles.maltalef = {
       bookmarks = { };
-      extensions = with addons; [ ublock-origin vimium darkreader ];
+      extensions.packages = with addons; [ ublock-origin vimium darkreader ];
 	  search.default = "DuckDuckGo";
 	  search.force = true;
 	  
