@@ -1,6 +1,6 @@
 { pkgs, ... }: {
   programs.emacs = {
-    package = pkgs.emacs29;
+    package = pkgs.emacs;
     enable = true;
   };
 
