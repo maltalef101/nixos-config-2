@@ -24,12 +24,6 @@
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_zen;
 
-  services.xserver.videoDrivers = [ "intel" ];
-  services.xserver.deviceSection = ''
-	Option "DRI" "2"
-	Option "TearFree" "true"
-  '';
-
   services.autorandr = {
     enable = true;
     profiles = {
@@ -86,9 +80,9 @@
 
   programs.dconf.enable = true;
 
-  hardware.opengl = {
+  hardware.graphics = {
     enable = true;
-	driSupport32Bit = true;
+	enable32Bit = true;
   };
 
   services.logind = {
