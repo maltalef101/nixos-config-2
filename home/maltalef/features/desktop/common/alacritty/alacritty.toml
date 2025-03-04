@@ -85,7 +85,7 @@ action = "Copy"
 key = "C"
 mods = "Alt"
 
-[shell]
+[terminal.shell]
 program = "/etc/profiles/per-user/maltalef/bin/zsh"
 # args = [ "-l" ]
 
