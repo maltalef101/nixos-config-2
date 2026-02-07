@@ -34,7 +34,7 @@
 #				"HYPRCURSOR_SIZE,24"
 #			];
 
-			exec-once = "swaync & waybar & blueman-applet & nm-applet";
+			exec-once = "waybar & blueman-applet & nm-applet";
 
 			general = {
 				gaps_in = 8;
