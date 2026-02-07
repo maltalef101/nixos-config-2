@@ -5,7 +5,6 @@
     ./nix.nix
     ./openssh.nix
     ./doas.nix
-    ./sops.nix
   ];
 
   nixpkgs = {

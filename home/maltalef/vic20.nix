@@ -13,11 +13,8 @@
   wayland.windowManager.hyprland = {
 	  settings = {
 			device = [
-				{
-					name = "genius-wireless-device-1"; 
-					accel_profile = "flat";
-					sensitivity = -0.36;
-				}
+				{ name = "2.4g-mouse"; sensitivity = "-0.1"; accel_profile = "flat"; }
+				{ name = "genius-wireless-device-1"; accel_profile = "flat"; sensitivity = -0.36; }
 			];
 	  };
   };

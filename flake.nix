@@ -2,8 +2,8 @@
   description = "maltalef's NixOS configuration.";
 
   inputs = {
-    #nixpkgs.url = "github:nixos/nixpkgs/nixos-24.05";
-	nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    #nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+	nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
 	nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     hardware.url = "github:nixos/nixos-hardware";
@@ -40,14 +40,17 @@
 	};
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs:
+  outputs = { self, nixpkgs, home-manager, ... }@inputs:
     let
       inherit (self) outputs;
       lib = nixpkgs.lib // home-manager.lib;
       # This could be expanded to multiple architectures when that comes to need.
       systems = [ "x86_64-linux" ];
       forEachSystem = f: lib.genAttrs systems (sys: f pkgsFor.${sys});
-      pkgsFor = nixpkgs.legacyPackages;
+      pkgsFor = lib.genAttrs systems (system: import nixpkgs {
+		  inherit system;
+		  config.allowUnfree = true;
+	  });
 
       mkSystem = system: hostname:
         lib.nixosSystem {
@@ -56,11 +59,10 @@
             { networking.hostName = hostname; }
             (./. + "/hosts/${hostname}")
             home-manager.nixosModules.home-manager
-            sops-nix.nixosModules.sops
             {
               home-manager = {
                 useUserPackages = true;
-                useGlobalPkgs = true;
+				useGlobalPkgs = true;
                 extraSpecialArgs = { inherit inputs; };
                 users.maltalef =
                   (import (./. + "/home/maltalef/${hostname}.nix") {
@@ -85,6 +87,11 @@
         # c128 = mkSystem "x86_64-linux" "c128";
         # Laptop (Dell Latitude 5480 Intel 7th gen)
         vic20 = mkSystem "x86_64-linux" "vic20";
+		# vic20 = lib.homeManagerConfiguration {
+		# 	modules = [ ./home/maltalef/vic20.nix ];
+		# 	pkgs = pkgsFor.x86_64-linux;
+		# 	extraSpecialArgs = { inherit inputs outputs; };
+		# };
         # Home server (Old Phenom II X4 945, 2Gb RAM)
         kim1 = mkSystem "x86_64-linux" "kim1";
       };

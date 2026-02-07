@@ -8,11 +8,6 @@ in
     ./features/cli
   ];
 
-  nixpkgs = {
-    # overlays = { };
-    config.allowUnfree = true;
-  };
-
   nix = {
     package = lib.mkDefault pkgs.nix;
     settings = {
