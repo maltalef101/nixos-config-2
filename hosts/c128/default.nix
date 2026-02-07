@@ -1,9 +1,7 @@
 { pkgs, inputs, ... }: {
   imports = with inputs.hardware.nixosModules; [
-    common-cpu-intel
-    common-gpu-intel
-    common-pc-ssd
-
+     lenovo-thinkpad-x1
+     
     ./hardware-configuration.nix
 
     ../common
@@ -30,4 +28,5 @@
 	  lidSwitchDocked = "ignore";
 	  lidSwitchExternalPower = "ignore";
   };
+  services.fprintd.enable = true;
 }

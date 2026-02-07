@@ -1,4 +1,4 @@
-{ pkgs, config, ... }: {
+{ pkgs, config, lib, ... }: {
 
 	config = { 
 		home.file.".config/zsh/completion.zsh".source = ./completion.zsh;
@@ -50,31 +50,30 @@
 				}
 			];
 
-			initExtraFirst = ''
-				stty stop undef
-			'';
-
-			initExtraBeforeCompInit = ''
-				zstyle ':completion:*' menu select
-				zmodload zsh/complist
-			'';
-
-			initExtra = ''
-				_comp_options+=(globdots)
-				source $ZDOTDIR/completion.zsh
-
-				bindkey -M menuselect 'h' vi-backward-char
-				bindkey -M menuselect 'k' vi-up-line-or-history
-				bindkey -M menuselect 'l' vi-forward-char
-				bindkey -M menuselect 'j' vi-down-line-or-history
-				bindkey -v '^?' backward-delete-char
-				bindkey '^ ' accept-line # accept suggestions
-
-				autoload edit-command-line; zle -N edit-command-line
-				bindkey '^e' edit-command-line
-
-				setopt correct
-			'';
+			initContent = let 
+				extraFirst = lib.mkOrder 500 "stty stop undef"; 
+				extraBeforeCompInit = lib.mkOrder 550 '' 
+					zstyle ':completion:*' menu select
+					zmodload zsh/complist
+				'';
+				zshConfig = lib.mkOrder 1000 ''
+					_comp_options+=(globdots)
+					source $ZDOTDIR/completion.zsh
+	
+					bindkey -M menuselect 'h' vi-backward-char
+					bindkey -M menuselect 'k' vi-up-line-or-history
+					bindkey -M menuselect 'l' vi-forward-char
+					bindkey -M menuselect 'j' vi-down-line-or-history
+					bindkey -v '^?' backward-delete-char
+					bindkey '^ ' accept-line # accept suggestions
+	
+					autoload edit-command-line; zle -N edit-command-line
+					bindkey '^e' edit-command-line
+	
+					setopt correct
+				''; 
+			in 
+			    lib.mkMerge [ extraFirst extraBeforeCompInit zshConfig ];
 
 			envExtra = ''
 				export KEYTIMEOUT=1

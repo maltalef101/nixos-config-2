@@ -36,10 +36,6 @@
 
 			exec-once = "swaync & waybar & blueman-applet & nm-applet";
 
-			exec = [
-				"thunderbird"
-			];
-
 			general = {
 				gaps_in = 8;
 				gaps_out = 7;
@@ -110,10 +106,6 @@
 				"special:volume, on-created-empty:[float; size 950 400; move 20 50] alacritty -e pulsemixer"
 				"special:chat, on-created-empty:telegram-desktop"
 				"special:scratchpad, on-created-empty:[float; size 700 400; center] alacritty"
-			];
-
-			windowrulev2 = [
-				"workspacesilent special:mail, class:(thunderbird)"
 			];
 
 			bindm = [

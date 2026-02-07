@@ -2,8 +2,8 @@
   description = "maltalef's NixOS configuration.";
 
   inputs = {
-    #nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-	nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+	#nixpkgs.url = "github:nixos/nixpkgs/nixos-25.05";
 	nixpkgs-unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     hardware.url = "github:nixos/nixos-hardware";
@@ -83,8 +83,8 @@
       nixosConfigurations = {
         # Main desktop
         c64 = mkSystem "x86_64-linux" "c64";
-        # Laptop (Positivo BGH)
-        # c128 = mkSystem "x86_64-linux" "c128";
+        # Laptop (X1 Carbon)
+        c128 = mkSystem "x86_64-linux" "c128";
         # Laptop (Dell Latitude 5480 Intel 7th gen)
         vic20 = mkSystem "x86_64-linux" "vic20";
 		# vic20 = lib.homeManagerConfiguration {
