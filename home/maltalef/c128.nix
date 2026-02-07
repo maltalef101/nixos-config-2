@@ -15,6 +15,7 @@
 			device = [
 				{ name = "2.4g-mouse"; sensitivity = "-0.1"; accel_profile = "flat"; }
 				{ name = "genius-wireless-device-1"; accel_profile = "flat"; sensitivity = -0.36; }
+				{ name = "tpps/2-elan-trackpoint"; accel_profile = "flat"; sensitivity = -1;}
 			];
 	  };
   };

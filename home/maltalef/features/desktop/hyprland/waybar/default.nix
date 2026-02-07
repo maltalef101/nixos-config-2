@@ -27,6 +27,7 @@
 					"memory"
 					"cpu"
 					"temperature"
+					"battery"
 					"tray"
 				    "custom/notifications"
 				];
@@ -86,6 +87,21 @@
 					states = {
 						warning = 80;
 						critical = 95;
+					};
+				};
+
+				battery = {
+					interval = 20;
+					states = {
+						warning = 30;
+						critical = 15;
+					};
+
+					format = "<span font='Noto Color Emoji'>{icon}</span> {capacity}%";
+					format_icons = {
+						charging = "🔌";
+						discharging = "🔋";
+						full = "🔋";
 					};
 				};
 				

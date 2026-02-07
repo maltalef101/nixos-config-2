@@ -1,5 +1,5 @@
 { pkgs, inputs, ... }: {
-	imports = [ ../common ./waybar ./wofi ./hyprlock.nix ./hypridle.nix ./swaync ];
+	imports = [ ../common ./waybar ./wofi ./hyprlock.nix ./hypridle.nix ];
 
 	home.pointerCursor = {
 		package = pkgs.capitaine-cursors;
@@ -34,7 +34,7 @@
 #				"HYPRCURSOR_SIZE,24"
 #			];
 
-			exec-once = "waybar & blueman-applet & nm-applet";
+			exec-once = "swaync & waybar & blueman-applet & nm-applet";
 
 			general = {
 				gaps_in = 8;
