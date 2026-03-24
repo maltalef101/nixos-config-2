@@ -21,15 +21,28 @@
     };
 
 	hyprland = {
-		type = "git";
-		url = "https://github.com/hyprwm/Hyprland";
-		ref = "refs/tags/v0.47.2";
-		submodules = true;
+		url = "github:hyprwm/Hyprland";
 		inputs.nixpkgs.follows = "nixpkgs";
 	};
 
 	hyprlock = {
 		url = "github:hyprwm/hyprlock";
+		inputs.nixpkgs.follows = "nixpkgs";
+	};
+
+	hyprgrass = {
+		url = "github:horriblename/hyprgrass";
+		inputs.hyprland.follows = "hyprland";
+	};
+
+	hyprspace = {
+		url = "github:KZDKM/Hyprspace";
+		inputs.hyprland.follows = "hyprland";
+	};
+
+	hyprpaper = {
+		url = "github:hyprwm/hyprpaper";
+		inputs.hyprland.follows = "hyprland";
 		inputs.nixpkgs.follows = "nixpkgs";
 	};
 
@@ -68,6 +81,10 @@
                   (import (./. + "/home/maltalef/${hostname}.nix") {
                     inherit inputs lib outputs;
                   });
+				users.mw = 
+				  (import (./. + "/home/mw/${hostname}.nix") {
+					inherit inputs lib outputs;
+				  });
               };
             }
           ];
@@ -94,6 +111,8 @@
 		# };
         # Home server (Old Phenom II X4 945, 2Gb RAM)
         kim1 = mkSystem "x86_64-linux" "kim1";
+		# Work machine (E14)
+		mw420 = mkSystem "x86_64-linux" "mw420";
       };
     };
 }

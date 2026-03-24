@@ -25,6 +25,13 @@ in
     enable = true;
 	  homedir = "${config.xdg.dataHome}/gnupg";
     settings.trust-model = "tofu+pgp";
+
+	publicKeys = [
+		{
+			source = ../../pgp.asc;
+			trust = 5;
+		}
+	];
   };
 
   #  systemd.user.services = {

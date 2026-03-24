@@ -3,7 +3,7 @@
   users.users.maltalef = {
     isNormalUser = true;
     shell = pkgs.zsh;
-    extraGroups = [ "wheel" "video" "audio" "networkmanager" "nm-openvpn" "libvirtd" "ubridge" ];
+    extraGroups = [ "wheel" "video" "audio" "networkmanager" "nm-openvpn" "libvirtd" "ubridge" "dialout" ];
 
 	  openssh.authorizedKeys.keys = [ (builtins.readFile ../../../../home/maltalef/ssh.pub) ];
 	 # passwordFile = config.sops.secrets.maltalef-password.path;

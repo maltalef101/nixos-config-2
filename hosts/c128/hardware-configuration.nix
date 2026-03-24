@@ -24,6 +24,11 @@
   nixpkgs.hostPlatform.system = "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = true;
 
+  hardware.graphics = {
+	  enable = true;
+	  enable32Bit = true;
+  };
+
   networking = {
 	  firewall.enable = false;
   };
