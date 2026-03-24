@@ -1,5 +1,14 @@
 { pkgs, inputs, ... }: {
-	imports = [ ../common ./waybar ./wofi ./hyprlock.nix ./hypridle.nix ];
+	imports = [ 
+		../common 
+		./waybar 
+		./wofi 
+		./hyprlock.nix 
+		./hypridle.nix 
+		./hyprsunset.nix 
+		./hyprpaper.nix
+		./swaync 
+	];
 
 	home.pointerCursor = {
 		package = pkgs.capitaine-cursors;
@@ -26,6 +35,20 @@
 		xwayland.enable = true;
 
 		settings = {
+			plugin = {
+				touch_gestures = {
+					workspace_swipe_fingers = 3;
+					workspace_swipe_edge = "d";
+					long_press_delay = 400;
+					resize_on_border_long_press = true;
+					edge_margin = 30;
+
+					hyprgrass-bind = [
+						", swipe:3:u, exec, notify-send ahaha"
+					];
+				};
+			};
+
 			"$mod" = "SUPER";
 			"$terminal" = "alacritty";
 
@@ -34,12 +57,14 @@
 #				"HYPRCURSOR_SIZE,24"
 #			];
 
-			exec-once = "swaync & waybar & blueman-applet & nm-applet";
+			exec-once = "hyprpaper & waybar & blueman-applet & nm-applet";
 
 			general = {
 				gaps_in = 8;
 				gaps_out = 7;
 				border_size = 5;
+
+				resize_on_border = true;
 
 				layout = "master";
 				
@@ -69,6 +94,7 @@
 				repeat_delay = 160;
 
 				follow_mouse = "2";
+				touchdevice.output = "eDP-1";
 			};
 
 			cursor = {
@@ -114,9 +140,13 @@
 			];
 
 			bindel = [
-				", XF86MonBrightnessUp, exec, brightnessctl s 5%+"
-				", XF86MonBrightnessDown, exec, brightnessctl s 5%-"
-				
+				", XF86MonBrightnessUp, exec, brightnessctl s 4%+"
+				", XF86MonBrightnessDown, exec, brightnessctl s 4%-"
+				", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+				", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+				", XF86AudioRaiseVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 4%+"
+				", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 4%-"
+				", XF86NotificationCenter, exec, swaync-client -tsw"
 			];
 
 			bind = [
@@ -168,4 +198,6 @@
 			);
 		};
 	};
+
+	services.mpris-proxy.enable  = true; 
 }

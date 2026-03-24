@@ -4,11 +4,11 @@
 		settings = {
 			profile = [
 				{
-					time = "8:00";
+					time = "11:00";
 					temperature = 6000;
 				}
 				{
-					time = "17:00";
+					time = "20:00";
 					temperature = 4500;
 				}
 			];

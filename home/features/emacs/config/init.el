@@ -1,4 +1,4 @@
-;;; init.el -- Emacs config
+;;; init.el: Emacs config
 ;-*- Emacs-Lisp -*-
 ;-*- lexical-binding: t; -*-
 
@@ -42,7 +42,8 @@
 (scroll-bar-mode -1)
 (tab-bar-mode 1)
 
-(set-frame-font "FiraCode Nerd Font:pixelsize=14" nil t)
+;(set-frame-font "FiraCode Nerd Font:pixelsize=14" nil t)
+(setq default-frame-alist '(( font . "FiraCode Nerd Font:pixelsize=14")))
 
 (setq visible-bell t)
 
@@ -111,6 +112,9 @@
 ;; Bindings
 (global-set-key (kbd "<escape>") 'keyboard-escape-quit)
 (global-set-key (kbd "C-c K") 'memacs/kill-all-buffers)
+
+;; Dired
+(setf dired-kill-when-opening-new-dired-buffer t)
 
 ;;; === PACKAGES ===
 (require 'package)
@@ -309,22 +313,18 @@
   :config
   (setq git-gutter:update-interval 0.05))
 
-;; Dired
-(use-package dired-single)
 
 (use-package dired
   :ensure nil
   :commands (dired dired-jump)
-  :bind (("C-x C-j" . dired-jump)
-	 ("C-x d" . dired-single-magic-buffer))
+  :bind (("C-x C-j" . dired-jump))
   :custom ((dired-listing-switches "-agoh --group-directories-first"))
   :config
   (evil-collection-define-key 'normal 'dired-mode-map
-    (kbd "h") 'dired-single-up-directory
-    (kbd "l") 'dired-single-buffer
-    (kbd "RET") 'dired-single-buffer
-    [remap dired-find-file] 'dired-single-buffer
-    [remap dired-up-directory] 'dired-single-up-directory))
+    (kbd "h" 'dired-up-directory)
+    (kbd "l" 'dired-open-file)
+    (kbd "RET" 'dired-open-file)
+    )
 
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
@@ -333,7 +333,7 @@
   :after dired
   :config
 ;;  (add-to-list 'dired-open-functions #'dired-open-xdg t)
-  (setq dired-open-extensions '(("png" . "sxiv")
+  (setq dired-open-extensions '(("png" . "nsxiv")
 				("mkv" . "mpv"))))
 
 (use-package dired-hide-dotfiles
@@ -394,12 +394,6 @@
 
 (use-package company-box
   :hook (company-mode . company-box-mode))
-
-(use-package yasnippet
-  :config
-  (yas-reload-all)
-  (yas-global-mode))
-(use-package yasnippet-snippets)
 
 ;; == Language specific config ==
 

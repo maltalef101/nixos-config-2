@@ -1,9 +1,9 @@
-{ pkgs, inputs, ...}: {
+{ pkgs, config, ...}: {
 	services.hyprpaper = {
 		enable = true;
 		settings = {
 			wallpaper = {
-				path = "${xdg.configHome}/hypr/wallpaper.jpg";
+				path = "${config.xdg.configHome}/hypr/wallpaper.jpg";
 				fit_mode = "cover";
 			};
 		};

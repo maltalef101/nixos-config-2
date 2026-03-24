@@ -1,10 +1,18 @@
 { pkgs, config, lib, ... }: {
-  # imports = [ ./git.nix ./ssh.nix ./nushell ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
-  imports = [ ./git.nix ./ssh.nix ./zsh ./nvim ./tmux.nix ./starship.nix ./gpg.nix ];
+  imports = [ 
+	./git.nix 
+	./ssh.nix 
+	./zsh 
+	./nvim 
+	./tmux.nix 
+	./starship.nix 
+	./gpg.nix 
+	./superfile.nix
+  ];
 
   home.packages = with pkgs; [
     bc # Calclator
-    bottom # System resource viewer
+	btop
     ncdu # Nicer disk usage
     eza # Better ls
     ripgrep # Better (and faster) grep
@@ -19,6 +27,7 @@
 	unzip
 	dosfstools
 	usbutils
+	pv
   ];
 
   programs.bash.enable = true;

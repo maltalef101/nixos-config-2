@@ -98,16 +98,17 @@
 					};
 
 					format = "<span font='Noto Color Emoji'>{icon}</span> {capacity}%";
-					format_icons = {
+					format-icons = {
 						charging = "🔌";
 						discharging = "🔋";
 						full = "🔋";
+						plugged = "🔋";
 					};
 				};
 				
 				"custom/notifications" = {
 					tooltip = false;
-					format = "<span font='Noto Color Emoji'>{icon}</span> {}";
+					format = "<span font='Noto Color Emoji'>{icon}</span> {text}";
 					format-icons = {
 						notification = "🔔<sup>❕</sup>";
 						none = "🔔";

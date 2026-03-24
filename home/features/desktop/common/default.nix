@@ -24,6 +24,9 @@
 	mpv
 	# TODO: write standalone config for thunderbird
 	thunderbird
+	nautilus
+	nautilus-open-any-terminal
+	nsxiv
 
 	# personal helper scripts
 	hyprshot-full

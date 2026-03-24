@@ -19,7 +19,6 @@ let
 in {
   home.packages = with pkgs; [
     steam-with-pkgs
-    mangohud
     protontricks
   ];
 }

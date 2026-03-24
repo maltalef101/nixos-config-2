@@ -2,12 +2,12 @@
   imports = [
     ./global.nix
     #./features/desktop/leftwm
-    ./features/desktop/hyprland
-    ./features/desktop/common/optional/piper.nix
-    ./features/desktop/common/optional/network.nix
-    ./features/emacs
-    ./features/games
-	./features/tex
+    ../features/desktop/hyprland
+    ../features/desktop/common/optional/piper.nix
+    ../features/desktop/common/optional/network.nix
+    ../features/emacs
+    ../features/games
+	../features/tex
   ];
 
   wayland.windowManager.hyprland = {
@@ -15,7 +15,12 @@
 			device = [
 				{ name = "2.4g-mouse"; sensitivity = "-0.1"; accel_profile = "flat"; }
 				{ name = "genius-wireless-device-1"; accel_profile = "flat"; sensitivity = -0.36; }
-				{ name = "tpps/2-elan-trackpoint"; accel_profile = "flat"; sensitivity = -1;}
+				{ name = "tpps/2-elan-trackpoint"; accel_profile = "flat"; }
+			];
+
+			monitor = [ 
+				"eDP-1, 1920x1080, 0x0, 1" 
+				"HDMI-A-1, 1920x1080@100, 0x-1080, 1"
 			];
 	  };
   };

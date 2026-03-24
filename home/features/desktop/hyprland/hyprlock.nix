@@ -4,6 +4,10 @@
 		package = inputs.hyprlock.packages.${pkgs.stdenv.hostPlatform.system}.hyprlock;
 
 		settings = {
+			general = {
+				ignore_empty_input = false;
+			};
+
 			background = {
 				monitor = "";
 				color = "rgba(25, 20, 20, 1.0)";
