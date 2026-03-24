@@ -1,6 +1,6 @@
 { pkgs, inputs, ... }: {
   imports = with inputs.hardware.nixosModules; [
-     lenovo-thinkpad-x1
+     lenovo-thinkpad-e14-amd
      
     ./hardware-configuration.nix
 
