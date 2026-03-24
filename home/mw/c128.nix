@@ -5,18 +5,18 @@
   ...
 }:
 let
-  f_addons = inputs.firefox-addons.packages.${pkgs.system};
+  f_addons = inputs.firefox-addons.packages.x86_64-linux;
 in
 {
   imports = [
     ./global.nix
     #./features/desktop/leftwm
-    ../features/desktop/hyprland
-    ../features/desktop/common/optional/piper.nix
-    ../features/desktop/common/optional/network.nix
-    ../features/emacs
-    ../features/games
-    ../features/tex
+    ./features/desktop/hyprland
+    ./features/desktop/common/optional/piper.nix
+    ./features/desktop/common/optional/network.nix
+    ./features/emacs
+    ./features/games
+    ./features/tex
   ];
 
   wayland.windowManager.hyprland = {
@@ -55,13 +55,15 @@ in
     enable = true;
     profiles.mw = {
       bookmarks = { };
-      extensions.packages = with addons; [
+      extensions.packages = with f_addons; [
         ublock-origin
         vimium
         darkreader
       ];
       search.default = "ddg";
       search.force = true;
+	  id = 1;
+	  isDefault = false;
 
       settings = {
         "browser.aboutConfig.showWarning" = false;
