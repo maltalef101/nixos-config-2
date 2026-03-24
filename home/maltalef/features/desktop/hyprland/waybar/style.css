@@ -1,0 +1,50 @@
+@define-color background-color #1d2021;
+@define-color foreground-color #ebdbb2;
+@define-color background-color-alt #282828;
+@define-color foreground-color-alt #fbf1c7;
+@define-color primary #689d6a;
+@define-color secondary #8ec07c;
+@define-color alert #cc241d;
+@define-color warning #fabd2f;
+
+* {
+	font-family: FiraCode Nerd Font;
+	font-size: 13px;
+	min-height: 0;
+}
+
+window#waybar {
+	background-color: @background-color;
+	color: @foreground-color;
+}
+
+#workspaces button {
+	color: @foreground-color;
+	border-radius: 0px;
+	min-width: 10px;
+}
+
+#workspaces button.active {
+	color: @background-color;
+	background: @primary;
+}
+
+#cpu.critical {
+	box-shadow: inset 0 -3px @alert;
+}
+
+#disk.warning {
+	box-shadow: inset 0 -3px @warning;
+}
+
+#disk.critical {
+	box-shadow: inset 0 -3px @alert;
+}
+
+#memory.critical {
+	box-shadow: inset 0 -3px @alert;
+}
+
+#temperature.critical {
+	box-shadow: inset 0 -3px @alert;
+}
