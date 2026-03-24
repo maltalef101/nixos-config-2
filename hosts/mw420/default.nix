@@ -13,7 +13,6 @@
 	../common/optional/gamemode.nix
 	../common/optional/gdm.nix
 	../common/optional/thermald.nix
-	../common/optional/systemd-boot.nix
     ../common/optional/bluetooth.nix
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix
@@ -56,4 +55,8 @@
   };
 
   services.fprintd.enable = true;
+
+  environment.systemPackages = with pkgs; [
+	sbctl
+  ];
 }

@@ -1,5 +1,6 @@
 {
   boot = {
+	tmp.cleanOnBoot = true;
     initrd = {
       availableKernelModules =
         [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ];
@@ -7,7 +8,17 @@
 
 	  luks.devices."cryptroot".device = "/dev/disk/by-label/nix-crypt";
     };
-    kernelModules = [ "kvm-intel" ];
+	loader = {
+		limine = {
+			enable = true;
+			secureBoot.enable = true;
+		}; 
+		efi = {
+			canTouchEfiVariables = true;
+			efiSysMountPoint = "/boot/efi";
+		};
+		timeout = 3;
+	};
   };
 
   fileSystems = {
