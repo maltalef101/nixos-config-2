@@ -292,12 +292,6 @@
 
 (use-package hydra)
 
-(defhydra hydra-text-scale (:timeout 4)
-  "scale text"
-  ("j" text-scale-increase "up")
-  ("k" text-scale-decrease "down")
-  ("f" nil "finished" :exit t))
-
 (memacs/leader-keys
     "t" '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")
