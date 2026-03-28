@@ -27,6 +27,9 @@
 	nautilus
 	nautilus-open-any-terminal
 	nsxiv
+	protonvpn-gui
+	libreoffice
+	signal-desktop
 
 	# personal helper scripts
 	hyprshot-full

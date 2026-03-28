@@ -324,7 +324,7 @@
     (kbd "h" 'dired-up-directory)
     (kbd "l" 'dired-open-file)
     (kbd "RET" 'dired-open-file)
-    )
+    ))
 
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
