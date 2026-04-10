@@ -12,4 +12,12 @@
     source = ./config;
     recursive = true;
   };
+
+  home.packages = with pkgs; [
+   (aspellWithDicts (
+	dicts: with dicts; [
+		es
+	]
+   ))
+  ];
 }
