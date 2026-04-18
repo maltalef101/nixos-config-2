@@ -1,3 +1,0 @@
-[submodule "hosts/mw420/nix-security-box"]
-	path = hosts/mw420/nix-security-box
-	url = https://github.com/fabaff/nix-security-box
