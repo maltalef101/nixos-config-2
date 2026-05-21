@@ -39,7 +39,7 @@
     hey
     http-server
     httpx
-    nodePackages.hyperpotamus
+    hyperpotamus
     jaeles
     jsubfinder
     jwt-hack

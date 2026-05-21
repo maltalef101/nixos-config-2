@@ -9,7 +9,6 @@
     autobloody
     azurehound
     bloodhound-py
-    breads-ad
     chainsaw
     certi
     certipy

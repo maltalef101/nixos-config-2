@@ -8,7 +8,7 @@
     enumerepo
     holehe
     lse
-    maigret
+    # maigret  # insecure
     metabigor
     # p0f
     raccoon-scanner

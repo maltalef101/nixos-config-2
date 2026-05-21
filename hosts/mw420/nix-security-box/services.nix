@@ -11,7 +11,6 @@
     keepwn
     metasploit
     nbutools
-    nerva
     nuclei
     nuclei-templates
     openrisk
@@ -39,7 +38,6 @@
     # SNMP
     braa
     onesixtyone
-    snmpen
 
     # SSH
     baboossh
@@ -53,7 +51,7 @@
     wafw00f
 
     # Post-quantum
-    tlsanalyser
+    tlsanalyzer
     cryptoscan
     mini-pqc
     pqc-bench

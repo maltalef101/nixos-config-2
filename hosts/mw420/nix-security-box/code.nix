@@ -18,11 +18,10 @@
     gitls
     gitxray
     gokart
-    legitify
     osv-detector
     packj
     pip-audit
-    python310Packages.safety
+	safety-cli
     qbom
     search-vulns
     secrethound

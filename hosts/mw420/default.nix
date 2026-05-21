@@ -17,6 +17,7 @@
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix
 	../common/optional/hyprland.nix
+	./nix-security-box
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_19;

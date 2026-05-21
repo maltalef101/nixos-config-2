@@ -20,7 +20,6 @@
     ncrack
     nth
     # phrasendrescher
-    python3Packages.patator
     pywhisker
     sh4d0wup
     spearspray

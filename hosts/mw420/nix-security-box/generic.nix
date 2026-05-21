@@ -19,8 +19,6 @@
     hurl
     inetutils
     inxi
-    ioccheck
-    iproute
     iproute2
     iw
     lynx
@@ -28,9 +26,8 @@
     nano
     parted
     pwgen
-    ronin
     spyre
-    utillinux
+    util-linux
     wget
     xh
     xnldorker

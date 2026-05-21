@@ -17,7 +17,7 @@
     iputils
     lftp
     mdns-scanner
-    mitm6
+    # mitm6 # python 3.13 doesn't support future-1.0.0
     mtr
     ncftp
     netcat-gnu
@@ -39,7 +39,6 @@
     wbox
     whois
     whosthere
-    wtcat
-    yersinia
+    # yersinia # broken
   ];
 }

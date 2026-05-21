@@ -11,16 +11,16 @@
     extrude
     gallia
     hachoir
-    nrfutil
+    # nrfutil   # unfree license
     packetry
     teensy-loader-cli
     termineter
     tytools
-    python3Packages.angr
-    python3Packages.angrop
-    python3Packages.can
+    python3Packages.python-can
     python3Packages.pyi2cflash
     python3Packages.pyspiflash
     # routersploit
   ];
+
+  # nixpkgs.config.segger-jlink.acceptLicense = true;
 }

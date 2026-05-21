@@ -4,7 +4,7 @@
 
 {
   environment.systemPackages = with pkgs; [
-    cardpeek
+    # cardpeek # broken
     libfreefare
     mfcuk
     mfoc
