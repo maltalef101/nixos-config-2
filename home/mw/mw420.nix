@@ -24,7 +24,7 @@
           sensitivity = -0.36;
         }
         {
-          name = "tpps/2-elan-trackpoint";
+          name = "epps/2-elantech-trackpoint";
           accel_profile = "flat";
         }
       ];
