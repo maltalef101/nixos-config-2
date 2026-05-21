@@ -81,6 +81,28 @@
                   (import (./. + "/home/maltalef/${hostname}.nix") {
                     inherit inputs lib outputs;
                   });
+              };
+            }
+          ];
+          specialArgs = { inherit inputs outputs; };
+        };
+
+      mkSystem_wk = system: hostname:
+        lib.nixosSystem {
+          system = system;
+          modules = [
+            { networking.hostName = hostname; }
+            (./. + "/hosts/${hostname}")
+            home-manager.nixosModules.home-manager
+            {
+              home-manager = {
+                useUserPackages = true;
+				useGlobalPkgs = true;
+                extraSpecialArgs = { inherit inputs; };
+                users.maltalef =
+                  (import (./. + "/home/maltalef/${hostname}.nix") {
+                    inherit inputs lib outputs;
+                  });
 				users.mw = 
 				  (import (./. + "/home/mw/${hostname}.nix") {
 					inherit inputs lib outputs;
@@ -90,6 +112,7 @@
           ];
           specialArgs = { inherit inputs outputs; };
         };
+
     in {
       inherit lib;
       overlays = import ./overlays { inherit inputs outputs; };
@@ -112,7 +135,7 @@
         # Home server (Old Phenom II X4 945, 2Gb RAM)
         kim1 = mkSystem "x86_64-linux" "kim1";
 		# Work machine (E14)
-		mw420 = mkSystem "x86_64-linux" "mw420";
+		mw420 = mkSystem_wk "x86_64-linux" "mw420";
       };
     };
 }

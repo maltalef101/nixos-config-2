@@ -6,7 +6,6 @@
 
     ../common
     ../common/users/maltalef
-	../common/users/mw
 
 	../common/optional/auto-cpufreq.nix
 	../common/optional/brightness.nix

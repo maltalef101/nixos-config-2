@@ -2,6 +2,9 @@
 ;-*- Emacs-Lisp -*-
 ;-*- lexical-binding: t; -*-
 
+(setq gc-cons-threshold most-positive-fixnum
+	  gc-cons-percentage 0.6)
+
 ;;; === Custom functions ===
 (defun memacs/display-startup-time ()
   (message "[STARTUP] Emacs loaded in %s with %d garbage collections."
@@ -12,24 +15,12 @@
 
 (defun memacs/kill-all-buffers ()
 	(interactive)
-	(mapcar 'kill-buffer (buffer-list))
+	(mapc 'kill-buffer (buffer-list))
 	(delete-other-windows))
 
 (defun memacs/short-indent ()
   (setq indent-tabs-mode nil)
   (setq tab-width 2))
-
-(defun memacs/evil-hook ()
-	 (dolist (mode '(custom-mode
-		  eshell-mode
-		  git-rebase-mode
-		  erc-mode
-		  circe-server-mode
-		  circe-chat-mode
-		  circe-query-mode
-		  sauron-mode
-		  term-mode))
-	   (add-to-list 'evil-emacs-state-modes mode)))
 
 (defun memacs/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
@@ -81,17 +72,6 @@
 ;; Directories and files
 (setq user-emacs-directory "~/.config/emacs")
 
-; Backups stay in a confined directory
-(setq backup-directory-alist `(("." . ,(expand-file-name "tmp/backups/" user-emacs-directory))))
-
-; Auto-saves also stay in a confined directory
-(setq auto-save-list-file-prefix (expand-file-name "tmp/auto-saves/sessions/" user-emacs-directory)
-      auto-save-file-name-transforms `((".*" ,(expand-file-name "tmp/auto-saves/" user-emacs-directory) t)))
-
-; Projectile
-(setq projectile-known-projects-file (expand-file-name "tmp/projectile-bookmarks.eld" user-emacs-directory)
-      lsp-session-file (expand-file-name "tmp/.lsp-session-v1" user-emacs-directory))
-
 ; custom.el
 (setq custom-file (expand-file-name "custom.el" user-emacs-directory))
 (load custom-file 'noerror)
@@ -119,10 +99,11 @@
 ;;; === PACKAGES ===
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-			 ("elpa" . "http://elpa.gnu.org/packages/")
-			 ("elpy" . "https://jorgenschaefer.github.io/packages/")))
+			 ("elpa" . "http://elpa.gnu.org/packages/")))
 
-(package-initialize)
+(setq package-install-upgrade-built-in t)
+
+;; (package-initialize)
 (unless package-archive-contents
   (package-refresh-contents))
 
@@ -131,22 +112,27 @@
 (require 'use-package)
 (setq use-package-always-ensure t)
 
+(use-package no-littering
+  :init
+  ;; Backups y auto-saves no los cubre por defecto, hay que pedirlos:
+  (setq backup-directory-alist
+        `((".*" . ,(no-littering-expand-var-file-name "backup/"))))
+  (setq auto-save-file-name-transforms
+        `((".*" ,(no-littering-expand-var-file-name "auto-save/") t))))
+
 (use-package auto-package-update
   :custom
   (auto-package-update-interval 7)
   (auto-package-update-prompt-before-update t)
-  (auto-package-hide-results t))
+  (auto-package-update-hide-results t)
+  :config
+  (auto-package-update-maybe))
 
 (use-package diminish)
 
-(use-package no-littering)
-
-(use-package all-the-icons)
-
-(use-package rainbow-delimiters
-  :hook (prog-mode. rainbow-delimiters-mode))
-
-(use-package unicode-fonts)
+(use-package unicode-fonts
+  :config
+  (unicode-fonts-setup))
 
 (use-package doom-themes
   :init
@@ -155,21 +141,24 @@
   :config
   (load-theme 'doom-gruvbox t))
 
+(use-package yasnippet
+  :config
+  (yas-global-mode 1))
+
 (defun memacs/org-latex-snippets ()
   "Activate LaTeX snippets in Org mode."
   (yas-activate-extra-mode 'latex-mode))
 
 (use-package org
-    :mode (("\\.org$" . org-mode))
+    :mode (("\\.org\\'" . org-mode))
 	:hook (org-mode . memacs/org-latex-snippets))
 (add-hook 'org-mode-hook #'auto-fill-mode)
 
 
-(setq org-directory (concat (getenv "XDG_DOCUMENTS_DIR") "/org-roam/"))
 (use-package org-roam
-  :custom
-  (org-roam-directory (file-truename org-directory))
-  (org-roam-db-autosync-mode)
+  :init
+  (setq org-directory (expand-file-name "org-roam/" (getenv "XDG_DOCUMENTS_DIR")))
+  (setq org-roam-directory (file-truename org-directory))
   :bind (("C-c n f" . org-roam-node-find)
          ("C-c n r" . org-roam-node-random)
          (:map org-mode-map
@@ -177,7 +166,9 @@
                 ("C-c n o" . org-id-get-create)
                 ("C-c n t" . org-roam-tag-add)
                 ("C-c n a" . org-roam-alias-add)
-                ("C-c n l" . org-roam-buffer-toggle)))))
+                ("C-c n l" . org-roam-buffer-toggle))))
+  :config
+  (org-roam-db-autosync-mode))
 
 ;; (use-package tex
 ;; 	:ensure nil
@@ -200,7 +191,6 @@
 
 (use-package evil-collection
   :after evil
-  :diminish evil-collection-unimpaired-mode
   :config
   (evil-collection-init))
 
@@ -235,9 +225,9 @@
   (ivy-mode 1))
 
 (use-package ivy-rich
-  :after ivy
+  :after (ivy counsel)
   :diminish ivy-rich-mode
-  :init
+  :config
   (ivy-rich-mode 1))
 
 (use-package counsel
@@ -253,6 +243,7 @@
   (counsel-mode 1))
 
 (use-package projectile
+  :defer t
   :diminish projectile-mode
   :config (projectile-mode)
   :custom ((projectile-completion-system 'ivy))
@@ -292,18 +283,13 @@
 
 (use-package hydra)
 
-(defhydra hydra-text-scale (:timeout 4)
-  "scale text"
-  ("j" text-scale-increase "up")
-  ("k" text-scale-decrease "down")
-  ("f" nil "finished" :exit t))
-
 (memacs/leader-keys
     "t" '(:ignore t :which-key "toggles")
     "tt" '(counsel-load-theme :which-key "choose theme")
 	"ts" '(hydra-text-scale/body :which-key "scale text"))
 
 (use-package magit
+  :defer t
   :commands (magit-status magit-get-current-branch)
   :config
   (setq magit-status-buffer-switch-function 'switch-to-buffer))
@@ -318,13 +304,7 @@
   :ensure nil
   :commands (dired dired-jump)
   :bind (("C-x C-j" . dired-jump))
-  :custom ((dired-listing-switches "-agoh --group-directories-first"))
-  :config
-  (evil-collection-define-key 'normal 'dired-mode-map
-    (kbd "h" 'dired-up-directory)
-    (kbd "l" 'dired-open-file)
-    (kbd "RET" 'dired-open-file)
-    ))
+  :custom ((dired-listing-switches "-agoh --group-directories-first")))
 
 (use-package diredfl
   :hook (dired-mode . diredfl-mode))
@@ -336,31 +316,28 @@
   (setq dired-open-extensions '(("png" . "nsxiv")
 				("mkv" . "mpv"))))
 
-(use-package dired-hide-dotfiles
-  :after dired
-  :config
-  (evil-collection-define-key 'normal 'dired-mode-map
-    "H" 'dired-hide-dotfiles-mode))
-
 ;;; === LSP AND LANGUAGES ===
 (use-package tree-sitter
   :diminish tree-sitter-mode
-  :config
-  (global-tree-sitter-mode)
-  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
+  :hook ((c-mode . tree-sitter-mode)
+		 (c++-mode . tree-sitter-mode)
+		 (python-mode . tree-sitter-mode)
+		 (tree-sitter-after-on . tree-sitter-hl-mode)))
+
 (use-package tree-sitter-langs)
 
 (use-package lsp-mode
+  :defer t
   :commands (lsp lsp-deferred)
   :hook (lsp-mode . memacs/lsp-mode-setup)
   :init
   (setq lsp-prefer-flymake nil)
   (setq-default lsp-keymap-prefix "C-c c l")
   :custom
-  (lsp-prefer-capf)
+  (lsp-prefer-capf t)
   (lsp-rust-analyzer-server-display-inlay-hints t)
   (lsp-rust-analyzer-display-chaining-hints t)
-  (lsp-rust-analizer-display-closure-return-type-hints t)
+  (lsp-rust-analyzer-display-closure-return-type-hints t)
   :config
   (lsp-enable-which-key-integration t))
 
@@ -399,7 +376,7 @@
 
 ;; TS and JS
 (use-package typescript-mode
-  :mode "\\*.ts\\'"
+  :mode "\\.ts\\'"
   :hook (typescript-mode . lsp-deferred)
   :config
   (setq typescript-indent-level 4))
@@ -414,13 +391,6 @@
   ;; (add-hook 'json-mode-hook #'memacs/short-indent)
   )
 
-;; Vue
-(use-package vue-mode
-  :mode "\\*.vue\\'"
-  :hook (vue-mode . lsp-deferred)
-  :config
-  (add-hook 'mmm-mode-hook (lambda () (set-face-background 'mmm-default-submode face nil))))
-
 ;; Markdown
 (use-package markdown-mode
   :mode "\\.md\\'"
@@ -428,7 +398,6 @@
 
 ;; Rust
 (use-package rustic
-  :ensure
   ;; :bind (:map rustic-mode-map
   ;;   		  ("M-j" . lsp-ui-imenu)
   ;;   		  ("M-?" . lsp-find-references)
@@ -447,14 +416,26 @@
   (setq rustic-format-on-save nil))
 
 ;; C
-(use-package c-mode
+(use-package cc-mode
   :ensure nil
-  :hook ((c-mode c++-mode objc-mode cuda-mode) . lsp))
+  :init
+  (setq lsp-idle-delay 0.1)
+  :hook ((c-mode c++-mode objc-mode cuda-mode) . lsp)
+  :config
+  (c-add-style "webkit"
+			   '("linux"
+				 (c-basic-offset .4)
+				 (c-offsets.alist . ((innamespace . 0)
+									 (inline-open)
+									 (access-label . -)
+									 (case-label . 0)))))
+  (setq c-default-style '((c-mode . "webkit")
+						  (c++-mode . "webkit")
+						  (awk-mode "awk")
+						  (other . "gnu")))
+  (setq c-basic-offset 4))
 
-;; Java
-(use-package lsp-java
-  :after lsp)
-(use-package java
-  :ensure nil
-  :hook (java-mode . lsp-deferred)
-  :after lsp-java)
+(add-hook 'emacs-startup-hook
+          (lambda ()
+            (setq gc-cons-threshold (* 16 1024 1024)
+                  gc-cons-percentage 0.1)))
