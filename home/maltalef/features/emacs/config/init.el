@@ -24,7 +24,8 @@
 
 (defun memacs/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  (lsp-headerline-breadcrumb-mode))
+  (lsp-headerline-breadcrumb-mode)
+  (lsp-inlay-hints-mode 1))
 
 ;;; === Global settings ===
 (menu-bar-mode -1)
@@ -157,7 +158,7 @@
 
 (use-package org-roam
   :init
-  (setq org-directory (expand-file-name "org-roam/" (getenv "XDG_DOCUMENTS_DIR")))
+  (setq org-directory (expand-file-name "org-roam/" (or (getenv "XDG_DOCUMENTS_DIR") (expand-file-name "~/documents"))))
   (setq org-roam-directory (file-truename org-directory))
   :bind (("C-c n f" . org-roam-node-find)
          ("C-c n r" . org-roam-node-random)
@@ -281,7 +282,14 @@
     :prefix "SPC"
     :global-prefix "C-SPC"))
 
+(use-package lv)
 (use-package hydra)
+
+(defhydra hydra-text-scale (:timeout 4)
+  "scale text"
+  ("j" text-scale-increase "in")
+  ("k" text-scale-decrease "out")
+  ("f" nil "finished" :exit t))
 
 (memacs/leader-keys
     "t" '(:ignore t :which-key "toggles")
@@ -335,23 +343,31 @@
   (setq-default lsp-keymap-prefix "C-c c l")
   :custom
   (lsp-prefer-capf t)
+  (lsp-signature-auto-activate '(:on-trigger-char :on-server-request :after-completion))
+  (lsp-signature-render-documentation t)
   (lsp-rust-analyzer-server-display-inlay-hints t)
   (lsp-rust-analyzer-display-chaining-hints t)
   (lsp-rust-analyzer-display-closure-return-type-hints t)
   :config
-  (lsp-enable-which-key-integration t))
+  (lsp-enable-which-key-integration t)
+  (define-key lsp-mode-map (kbd "<tab>") #'company-indent-or-complete-common))
 
 (use-package lsp-ui
   :after lsp
   :custom
   (lsp-ui-sideline-show-diagnostics t)
-  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-sideline-show-hover nil)
   (lsp-ui-sideline-show-code-actions t)
-  ;; (lsp-ui-sideline-update-mode "line")
+  (lsp-ui-sideline-update-mode 'line)
   (lsp-ui-sideline-delay 0.2)
   (lsp-ui-doc-enable t)
-  (lsp-ui-doc-position at-point)
-  )
+  (lsp-ui-doc-use-childframe t)
+  (lsp-ui-doc-position 'at-point)
+  (lsp-ui-doc-max-width 80)
+  (lsp-ui-doc-max-height 15)
+  (lsp-ui-doc-show-with-cursor t)
+  (lsp-ui-doc-show-with-mouse t)
+  (lsp-ui-doc-delay 0.5))
 
 (use-package lsp-ivy
   :after lsp)
@@ -363,8 +379,6 @@
   :bind
   (:map company-active-map
               ("<tab>" . company-complete-selection))
-  (:map lsp-mode-map
-        ("<tab>" . company-indent-or-complete-common))
   :custom
   (company-minimum-prefix-length 1)
   (company-idle-delay 0.0))
@@ -410,6 +424,7 @@
   :bind (("<f6>" . rustic-format-buffer))
   :custom
   (lsp-rust-analyzer-cargo-watch-command "clippy")
+  :hook (rustic-mode . tree-sitter-hl-mode)
   :config
   (require 'lsp-rust)
   (setq lsp-rust-analyzer-completion-add-call-parenthesis nil)

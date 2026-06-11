@@ -1,8 +1,8 @@
 #!/bin/sh
 
 filename="$(date "+%s").png"
-savedir="$XDG_PICTURES_DIR/00screenshots/$(date "+%m-%Y")"
+savedir="${XDG_PICTURES_DIR:-"~/pictures"}/00screenshots/$(date "+%m-%Y")"
 
 [ -d "$savedir" ] || mkdir -p "$savedir"
 
-hyprshot -m region -f "$filename" -o "$savedir"
+hyprshot -m region -f "$filename" -o "$savedir" >> /tmp/region.log 2>&1
