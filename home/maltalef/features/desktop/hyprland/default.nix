@@ -178,6 +178,7 @@
 				
 				", Print, exec, hyprshot-region"
 				"SHIFT, Print, exec, hyprshot-full"
+
 				", XF86SelectiveScreenshot, exec, hyprshot-region"
 				"SHIFT, XF86SelectiveScreenshot, exec, hyprshot-full"
 
