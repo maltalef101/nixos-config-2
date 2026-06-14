@@ -21,7 +21,7 @@
     dalfox
     dismap
     dirstalk
-    dontgo403
+    nomore403
     forbidden
     galer
     gau

@@ -25,6 +25,11 @@
   services.flatpak.enable = true;
   programs.dconf.enable = true;
 
+  # scapy (packet-generators) arrastra python-ecdsa, marcado inseguro por
+  # CVE-2024-23342 (timing side-channel "Minerva", sin fix upstream). Solo se
+  # usa como dep transitiva de tooling, no para firmar secretos propios -> OK.
+  nixpkgs.config.permittedInsecurePackages = [ "python3.13-ecdsa-0.19.2" ];
+
   services.fwupd.enable = true;
   services.tlp = {
 	enable = true;
