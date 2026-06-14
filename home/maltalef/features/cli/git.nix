@@ -1,15 +1,16 @@
 { pkgs, lib, config, ... }: {
   programs.git = {
     enable = true;
-    userName = "Manuel Altalef";
-    userEmail = "maltalef@auror.ar";
-	signing = {
-		format = "openpgp";
-		signByDefault = true;
-	};
-    extraConfig = { 
-	  init.defaultBranch = "main"; 
-	  safe.directory = "*";
-	};
+    settings = {
+      user.name = "Manuel Altalef";
+      user.email = "maltalef@auror.ar";
+	    init.defaultBranch = "main";
+	    safe.directory = "*";
+    };
+
+	  signing = {
+		  format = "openpgp";
+		  signByDefault = true;
+	  };
   };
 }

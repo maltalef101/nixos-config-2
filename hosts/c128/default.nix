@@ -19,7 +19,7 @@
 	../common/optional/hyprland.nix
   ];
 
-  boot.kernelPackages = pkgs.linuxKernel.packages.linux_6_19;
+  boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_0;
 
   services.flatpak.enable = true;
   programs.dconf.enable = true;

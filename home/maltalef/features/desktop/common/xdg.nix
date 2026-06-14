@@ -6,6 +6,8 @@ in {
     userDirs = {
       enable = true;
       createDirectories = true;
+      setSessionVariables = true;
+
       documents = "${homeDirectory}/documents";
       download = "${homeDirectory}/downloads";
       videos = "${homeDirectory}/videos";

@@ -1,8 +1,11 @@
-{ pkgs, lib, inputs, ... }:
+{ pkgs, lib, inputs, config, ... }:
 let addons = inputs.firefox-addons.packages.${pkgs.system};
 in {
   programs.firefox = {
     enable = true;
+
+    configPath = ".mozilla/firefox";
+
     profiles.maltalef = {
       bookmarks = { };
       extensions.packages = with addons; [ ublock-origin vimium darkreader ];
