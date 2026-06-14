@@ -3,6 +3,11 @@ let addons = inputs.firefox-addons.packages.${pkgs.system};
 in {
   programs.firefox = {
     enable = true;
+
+    # Mantener la ruta legacy de perfiles (el default cambió a XDG en 26.05);
+    # silencia el warning sin tener que mover ~/.mozilla/firefox.
+    configPath = ".mozilla/firefox";
+
     profiles.mw = {
       bookmarks = { };
       extensions.packages = with addons; [ ublock-origin vimium darkreader ];

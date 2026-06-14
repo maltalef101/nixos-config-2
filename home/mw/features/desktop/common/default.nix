@@ -27,7 +27,7 @@
 	nautilus
 	nautilus-open-any-terminal
 	nsxiv
-	protonvpn-gui
+	proton-vpn
 	libreoffice
 	signal-desktop
 

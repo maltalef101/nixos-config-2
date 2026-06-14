@@ -1,13 +1,12 @@
-{ pkgs, inputs, ... }: {
+{ pkgs, inputs, config, ... }: {
 	imports = [ 
 		../common 
 		./waybar 
 		./wofi 
 		./hyprlock.nix 
 		./hypridle.nix 
-		./hyprsunset.nix 
-		./hyprpaper.nix
-		./swaync 
+		./hyprsunset.nix
+		./swaync
 	];
 
 	home.pointerCursor = {
@@ -18,6 +17,7 @@
 
 	gtk = {
 		enable = true;
+		gtk4.theme = config.gtk.theme;
 
 		theme = {
 			package = pkgs.gruvbox-gtk-theme;
@@ -33,6 +33,8 @@
 	wayland.windowManager.hyprland = {
 		enable = true;
 		xwayland.enable = true;
+
+    configType = "hyprlang";
 
 		settings = {
 			plugin = {
@@ -57,7 +59,7 @@
 #				"HYPRCURSOR_SIZE,24"
 #			];
 
-			exec-once = "hyprpaper & waybar & blueman-applet & nm-applet";
+			exec-once = "waybar & blueman-applet & nm-applet";
 
 			general = {
 				gaps_in = 8;
@@ -177,6 +179,9 @@
 				
 				", Print, exec, hyprshot-region"
 				"SHIFT, Print, exec, hyprshot-full"
+
+				", XF86SelectiveScreenshot, exec, hyprshot-region"
+				"SHIFT, XF86SelectiveScreenshot, exec, hyprshot-full"
 
 				"$mod, v, togglespecialworkspace, volume"
 				"$mod, g, togglespecialworkspace, scratchpad"
