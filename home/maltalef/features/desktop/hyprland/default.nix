@@ -57,7 +57,9 @@
 #				"HYPRCURSOR_SIZE,24"
 #			];
 
-			exec-once = "hyprpaper & waybar & blueman-applet & nm-applet";
+			# hyprpaper lo gestiona services.hyprpaper (systemd user unit); no
+			# lanzarlo acá también o se duplica y crashea (conflicto de socket).
+			exec-once = "waybar & blueman-applet & nm-applet";
 
 			general = {
 				gaps_in = 8;
