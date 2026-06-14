@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }: {
+{ pkgs, inputs, config, ... }: {
 	imports = [ 
 		../common 
 		./waybar 
@@ -18,6 +18,7 @@
 
 	gtk = {
 		enable = true;
+    gtk4.theme = config.gtk.theme;
 
 		theme = {
 			package = pkgs.gruvbox-gtk-theme;
@@ -33,6 +34,10 @@
 	wayland.windowManager.hyprland = {
 		enable = true;
 		xwayland.enable = true;
+
+    # HACER: migrar config a lua? hyprland cambió su formato en la última
+    # release a la fecha (13062026) y na ta bueno qsy
+    configType = "hyprlang";
 
 		settings = {
 			plugin = {
