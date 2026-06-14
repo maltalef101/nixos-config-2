@@ -7,6 +7,20 @@
 				before_sleep_cmd = "loginctl lock-session";
 				after_sleep_cmd = "hyprctl dispatch dpms on";
 			};
+
+			# hypridle falla con "No rules configured" si no hay al menos un
+			# listener. Bloqueo a los 5 min, apago pantalla a los 10 min.
+			listener = [
+				{
+					timeout = 300;
+					on-timeout = "loginctl lock-session";
+				}
+				{
+					timeout = 600;
+					on-timeout = "hyprctl dispatch dpms off";
+					on-resume = "hyprctl dispatch dpms on";
+				}
+			];
 		};
 	};
 }
