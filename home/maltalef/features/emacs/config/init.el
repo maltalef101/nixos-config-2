@@ -340,7 +340,7 @@
   :hook (lsp-mode . memacs/lsp-mode-setup)
   :init
   (setq lsp-prefer-flymake nil)
-  (setq-default lsp-keymap-prefix "C-c c l")
+  (setq-default lsp-keymap-prefix "C-c l")
   :custom
   (lsp-prefer-capf t)
   (lsp-signature-auto-activate '(:on-trigger-char :on-server-request :after-completion))
