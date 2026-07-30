@@ -20,7 +20,7 @@
       {
         plugin = tmuxPlugins.continuum;
         extraConfig =
-          "	set -g @continuum-restore 'on'\n	set -g @continuum-save-interval '30' # minutes\n";
+          "	set -g @continuum-restore 'on'\n	set -g @continuum-save-interval '10' # minutes\n";
       }
     ];
 
