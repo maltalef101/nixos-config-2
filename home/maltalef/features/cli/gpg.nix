@@ -16,7 +16,11 @@ in
 
   services.gpg-agent = {
     enable = true;
-    #enableSshSupport = true;
+    enableSshSupport = true;
+    sshKeys = [
+      "3141D25FCB21C3C5983FDC7F0AF6A3B35EC98BDE" # subclave [A] ed25519
+      "64066B720D8F296B5354D4F04860E35BED9412E8" # subclave [A] nistp256
+    ];
     pinentry.package = pinentry.package;
     #enableExtraSocket = true;
   };
