@@ -20,6 +20,9 @@ in
     sshKeys = [
       "3141D25FCB21C3C5983FDC7F0AF6A3B35EC98BDE" # subclave [A] ed25519
       "64066B720D8F296B5354D4F04860E35BED9412E8" # subclave [A] nistp256
+      "6D8AFDC9A44712E1DC4D6549FFB7FB2D9B1A751B" # ~/.ssh/id_rsa (maltalef@c64)
+      "E92249E0C38B55DBEF53420C63301B0EF83F070E" # ~/.ssh/id_ecdsa (maltalef@mw420)
+      "53674FE15AD57618B2D3937F1526B8C1900EBBDE" # ~/.ssh/id_ed25519 (maltalef@mw420)
     ];
     pinentry.package = pinentry.package;
     #enableExtraSocket = true;
