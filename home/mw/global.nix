@@ -21,7 +21,7 @@ in
       TERMINAL = "alacritty";
 	    PAGER = "less";
       EDITOR = "nvim";
-      VISUAL = "emacs";
+      VISUAL = "nvim";
       BROWSER = "firefox";
 	  };
   };

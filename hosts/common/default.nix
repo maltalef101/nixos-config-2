@@ -1,4 +1,4 @@
-{ pkgs, inputs, outputs, ... }: {
+{ pkgs, inputs, outputs, lib, ... }: {
   imports = [
     ./auto-upgrade.nix
     ./locale.nix
@@ -16,6 +16,13 @@
 	enableAllTerminfo = true;
 	systemPackages = [ pkgs.git ];
 	pathsToLink = [ "/share/zsh" ]; # for zsh completion
+	# va acá (sistema) y no en systemd.user porque /etc/set-environment sourcea el
+	# EDITOR=nano (default de NixOS) y pisa lo que ponga systemd.user en el shell.
+	# mkDefault le gana igual al nano; para override por host: environment.sessionVariables.
+	sessionVariables = {
+	  EDITOR = lib.mkDefault "nvim";
+	  VISUAL = lib.mkDefault "nvim";
+	};
   };
 
   security.pam.loginLimits = [
