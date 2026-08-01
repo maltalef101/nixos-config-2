@@ -4,7 +4,7 @@
     ./servers/casa-house.nix
   ];
 
-  services.minecraft-server = {
+  services.minecraft-servers = {
     enable = true;
     eula = true;
   };
