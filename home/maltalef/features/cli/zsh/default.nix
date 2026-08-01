@@ -71,7 +71,11 @@
 					bindkey '^e' edit-command-line
 	
 					setopt correct
-				''; 
+
+					# refresca el tty/display que gpg-agent usa para pinentry en
+					# peticiones ssh-agent (si queda stale, "agent refused operation")
+					gpg-connect-agent updatestartuptty /bye >/dev/null 2>&1
+				'';
 			in 
 			    lib.mkMerge [ extraFirst extraBeforeCompInit zshConfig ];
 
