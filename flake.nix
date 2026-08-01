@@ -133,7 +133,8 @@
 		# 	extraSpecialArgs = { inherit inputs outputs; };
 		# };
         # Home server (Old Phenom II X4 945, 2Gb RAM)
-        kim1 = mkSystem "x86_64-linux" "kim1";
+        # deprecado: no hay hardware cumpliendo este rol hoy; descomentar para revivirlo
+        # kim1 = mkSystem "x86_64-linux" "kim1";
 		# Work machine (E14)
 		mw420 = mkSystem_wk "x86_64-linux" "mw420";
       };
