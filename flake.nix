@@ -126,7 +126,8 @@
         # Laptop (X1 Carbon)
         c128 = mkSystem "x86_64-linux" "c128";
         # Laptop (Dell Latitude 5480 Intel 7th gen)
-        vic20 = mkSystem "x86_64-linux" "vic20";
+        # deshabilitada temporalmente: laptop en desuso; descomentar para revivirla
+        # vic20 = mkSystem "x86_64-linux" "vic20";
 		# vic20 = lib.homeManagerConfiguration {
 		# 	modules = [ ./home/maltalef/vic20.nix ];
 		# 	pkgs = pkgsFor.x86_64-linux;
