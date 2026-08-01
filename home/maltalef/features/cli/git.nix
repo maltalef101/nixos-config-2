@@ -11,6 +11,7 @@
 	  signing = {
 		  format = "openpgp";
 		  signByDefault = true;
+		  key = "0x96AB62E9F32E5934!"; # subclave [S]; el ! fuerza esa subclave exacta
 	  };
   };
 }
