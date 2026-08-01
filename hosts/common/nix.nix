@@ -3,6 +3,8 @@
   nix = {
     settings = {
       allowed-users = [ "root" "@wheel" ];
+      # necesario para que deploy.sh pueda copiar closures buildeados en otra máquina de la flota
+      trusted-users = [ "root" "@wheel" ];
       auto-optimise-store = true;
       experimental-features = [ "nix-command" "flakes" ];
 
