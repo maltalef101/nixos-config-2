@@ -39,6 +39,11 @@ in
 			source = ../../pgp.asc;
 			trust = 5;
 		}
+		{
+			# clave del contexto móvil (pr100); certificada por la maestra
+			source = ../../pgp-movil.asc;
+			trust = 5;
+		}
 	];
   };
 
