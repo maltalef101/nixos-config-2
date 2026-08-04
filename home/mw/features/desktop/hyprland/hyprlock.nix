@@ -8,6 +8,12 @@
 				ignore_empty_input = false;
 			};
 
+			# Huella vía fprintd (D-Bus), en paralelo a la contraseña por PAM.
+			# En hosts sin lector no hace nada.
+			auth = {
+				fingerprint.enabled = true;
+			};
+
 			background = {
 				monitor = "";
 				color = "rgba(25, 20, 20, 1.0)";

@@ -10,5 +10,8 @@
 	# arrancar la sesión. Al habilitar Hyprland, lo dejamos como sesión default.
 	services.displayManager.defaultSession = "hyprland";
 
-	security.pam.services.hyprlock = {};
+	# Sin pam_fprintd: la conversación PAM de hyprlock es serial, así que el
+	# módulo de huella bloquea pidiendo el dedo antes de aceptar la contraseña.
+	# La huella la maneja hyprlock nativamente (auth:fingerprint), en paralelo.
+	security.pam.services.hyprlock.fprintAuth = false;
 }
