@@ -1,4 +1,8 @@
 { pkgs, ...}: {
+	# notify-send: antes lo traía dunst.nix (retirado); swaync es ahora el
+	# único stack de notificaciones, así que provee él el cliente.
+	home.packages = [ pkgs.libnotify ];
+
 	services.swaync = {
 		enable = true;
 

@@ -1,7 +1,6 @@
 { inputs, outputs, lib, ... }: {
   imports = [
     ./global.nix
-    ./features/desktop/leftwm
     ./features/desktop/common/optional/piper.nix
     ./features/emacs
     ./features/games

@@ -5,7 +5,6 @@
 	./zathura.nix
     ./alacritty
     #./dragon.nix
-    ./dunst.nix
     ./firefox.nix
     ./font.nix
     # ./redshift.nix
