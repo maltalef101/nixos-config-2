@@ -7,7 +7,6 @@
     ../common
     ../common/users/maltalef
 
-	../common/optional/auto-cpufreq.nix
 	../common/optional/brightness.nix
 	../common/optional/gamemode.nix
 	../common/optional/gdm.nix
@@ -19,7 +18,7 @@
 	../common/optional/hyprland.nix
   ];
 
-  boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_0;
+  boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_2;
 
   services.flatpak.enable = true;
   programs.dconf.enable = true;

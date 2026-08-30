@@ -8,7 +8,6 @@
     ../common/users/maltalef
 	../common/users/mw
 
-	../common/optional/auto-cpufreq.nix
 	../common/optional/brightness.nix
 	../common/optional/gamemode.nix
 	../common/optional/gdm.nix
@@ -20,7 +19,7 @@
 	./nix-security-box
   ];
 
-  boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_0;
+  boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_2;
 
   services.flatpak.enable = true;
   programs.dconf.enable = true;
@@ -28,7 +27,7 @@
   # scapy (packet-generators) arrastra python-ecdsa, marcado inseguro por
   # CVE-2024-23342 (timing side-channel "Minerva", sin fix upstream). Solo se
   # usa como dep transitiva de tooling, no para firmar secretos propios -> OK.
-  nixpkgs.config.permittedInsecurePackages = [ "python3.13-ecdsa-0.19.2" ];
+  nixpkgs.config.permittedInsecurePackages = [ "python3.14-ecdsa-0.19.2" ];
 
   services.fwupd.enable = true;
   services.tlp = {
