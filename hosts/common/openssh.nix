@@ -10,7 +10,7 @@ in {
       PasswordAuthentication = false;
       PermitRootLogin = "no";
       StreamLocalBindUnlink = "yes";
-	  LogLevel = "DEBUG";
+	  LogLevel = "INFO";
     };
 
     hostKeys = [{
