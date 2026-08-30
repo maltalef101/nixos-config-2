@@ -21,8 +21,12 @@
     };
 
 	hyprland = {
-		url = "github:hyprwm/Hyprland";
-		inputs.nixpkgs.follows = "nixpkgs";
+		# Pineado al tag de release: los plugins se portan por release, no
+		# siguen master. Actualizar en tándem con hyprspace y hyprsplit.
+		# Sin nixpkgs.follows: 0.56 pide deps más nuevas que nuestro nixpkgs
+		# (wayland-protocols >= 1.49, libinput >= 1.29) y con su propio lock
+		# el binario viene de hyprland.cachix.org en vez de compilarse.
+		url = "github:hyprwm/Hyprland/v0.56.0";
 	};
 
 	hyprlock = {
@@ -36,7 +40,17 @@
 	};
 
 	hyprspace = {
-		url = "github:KZDKM/Hyprspace";
+		# Upstream (KZDKM) no compila contra hyprland >= 0.55; este es el port
+		# a la API V2 (KZDKM/Hyprspace#238) pineado por sha, verificado contra
+		# v0.56.0. Volver a KZDKM/Hyprspace cuando se mergee el PR.
+		url = "github:ImanolBarba/Hyprspace/0799be7464fac7ea959b7c6c7809dadd6c21c5aa";
+		inputs.hyprland.follows = "hyprland";
+	};
+
+	split-monitor-workspaces = {
+		# Workspaces por monitor, estilo dwm/awesome. Taguea por release de
+		# hyprland (a diferencia de shezdy/hyprsplit, sin port a 0.55+ hoy).
+		url = "github:Duckonaut/split-monitor-workspaces/v0.56.0";
 		inputs.hyprland.follows = "hyprland";
 	};
 
