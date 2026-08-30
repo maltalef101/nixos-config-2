@@ -1,0 +1,63 @@
+#!/bin/sh
+
+# Bloquea la sesión y refleja el estado en el hint de logind.
+#
+# logind solo emite las señales Lock/Unlock; la propiedad LockedHint de la
+# sesión debe setearla quien posee el locker, y hyprlock no lo hace (issue
+# hyprwm/hyprlock#907). Este wrapper cubre esa parte: LockedHint=true antes de
+# lanzar hyprlock y false al desbloquear.
+#
+# El guard es por usuario (pgrep -u) y no por nombre global (pidof), para que
+# el lock de un usuario no bloquee el otro en hosts multi-sesión.
+
+set -euo pipefail
+
+# Si ya hay un lock de este usuario, no hacer nada (y no pisar el hint).
+pgrep -u "$(id -u)" -x hyprlock >/dev/null && exit 0
+
+# Resolver el objeto de sesión de logind sin heurísticas sobre el id: logind
+# acepta el id de sesión (p. ej. "2") o un "id+" con path de sesión D-Bus.
+session_id="${XDG_SESSION_ID:-}"
+if [ -z "$session_id" ]; then
+    # Desde units de systemd --user (hypridle) no hay XDG_SESSION_ID, y el
+    # audit sid resuelve a la sesión clase "manager", que no soporta lock
+    # hints. logind expone la sesión gráfica del usuario como "Display".
+    session_id="$(loginctl show-user "$(id -u)" -p Display --value 2>/dev/null || true)"
+fi
+[ -n "$session_id" ] || { echo "hyprlock-lock: no session" >&2; exit 1; }
+session_path="$(busctl --system call org.freedesktop.login1 \
+    /org/freedesktop/login1 org.freedesktop.login1.Manager GetSession s "$session_id" 2>/dev/null \
+    | sed -n 's/^o "\(.*\)"/\1/p')"
+[ -n "$session_path" ] || { echo "hyprlock-lock: no logind session for '$session_id'" >&2; exit 1; }
+
+# set_hint <true|false>: SetLockedHint vía D-Bus. Usar el método (no
+# set-property): el setter de la property está restringido a systemd, el
+# método SetLockedHint es UNPRIVILEGED y lo llama cualquier usuario del bus.
+set_hint() {
+    busctl --system call org.freedesktop.login1 \
+        "$session_path" org.freedesktop.login1.Session SetLockedHint b "$1" 2>/dev/null
+}
+
+# Esperar la propiedad LockedHint=true: logind puede tardar en setearla
+# (misma transacción que Lock), y si salimos antes el unlock la pisaría.
+wait_locked() {
+    for _ in $(seq 1 20); do
+        state="$(busctl --system get-property org.freedesktop.login1 \
+            "$session_path" org.freedesktop.login1.Session LockedHint 2>/dev/null || true)"
+        [ "$state" = "b true" ] && return 0
+        sleep 0.05
+    done
+}
+
+# El hint es best-effort: un fallo de D-Bus no debe impedir el lock (errexit).
+set_hint true || true
+wait_locked || true
+
+# El unlock (hint=false) lo hace el proceso hijo: mientras hyprlock esté vivo
+# el hint queda en true; al salir, setearlo false. (No usar trap+exec: el trap
+# EXIT no corre si la shell se reemplaza por exec. No dejar que errexit corte
+# antes de limpiar el hint si hyprlock sale con código != 0.)
+rc=0
+hyprlock || rc=$?
+set_hint false || true
+exit $rc

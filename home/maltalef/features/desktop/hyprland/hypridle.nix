@@ -3,7 +3,9 @@
 		enable = true;
 		settings = {
 			general = {
-				lock_cmd = "pidof hyprlock || hyprlock";
+				# Wrapper: guard por usuario + LockedHint de logind (hyprlock
+				# no setea el hint, hyprwm/hyprlock#907).
+				lock_cmd = "hyprlock-lock";
 				before_sleep_cmd = "loginctl lock-session";
 				after_sleep_cmd = "hyprctl dispatch dpms on";
 			};
