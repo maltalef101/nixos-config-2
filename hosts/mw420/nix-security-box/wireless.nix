@@ -19,6 +19,6 @@
     reaverwps
     wavemon
     wifite2
-    zigpy-cli
+    # zigpy-cli # build roto en nixpkgs actual: dep zigpy-zboss pide zigpy<2, hay 2.1.0
   ];
 }

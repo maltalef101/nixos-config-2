@@ -10,7 +10,7 @@
     # apkleaks
     apktool
     dex2jar
-    genymotion
+    # genymotion # fetch roto: el instalador upstream devuelve 403 (URL retirada)
     ghost
     morf
     otadump

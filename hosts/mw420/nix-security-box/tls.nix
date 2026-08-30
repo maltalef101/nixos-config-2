@@ -8,7 +8,7 @@
     gsan
     sslscan
     ssldump
-    sslsplit
+    # sslsplit # build roto en nixpkgs actual: falla el link (ld exit 1), incompat openssl
     sslstrip
     testssl
     tlsinfo

@@ -5,7 +5,7 @@
 {
   environment.systemPackages = with pkgs; [
     cantoolz
-    chipsec
+    # chipsec # build roto en nixpkgs actual: 2 tests fallan bajo python3.14 (string formatting)
     cmospwd
     esptool
     extrude

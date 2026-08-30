@@ -14,7 +14,7 @@
     cariddi
     cf-hero
     chopchop
-    clairvoyance
+    # clairvoyance # roto en nixpkgs actual: arrastra aiounittest, sin soporte python3.14
     commix
     crackql
     crlfsuite

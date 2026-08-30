@@ -8,7 +8,7 @@
     bomber-go
     cargo-audit
     credential-detector
-    deepsecrets
+    # deepsecrets # roto en nixpkgs actual: arrastra pydantic 1.x, sin soporte python3.14
     detect-secrets
     freeze
     # garble

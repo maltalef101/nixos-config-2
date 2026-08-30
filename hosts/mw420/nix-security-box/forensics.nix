@@ -6,7 +6,7 @@
   environment.systemPackages = with pkgs; [
     afflib
     amoco
-    acquire
+    # acquire # roto en nixpkgs actual: dissect-target sin soporte python3.14
     dcfldd
     ddrescue
     dislocker
