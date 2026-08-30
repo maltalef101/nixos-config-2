@@ -1,8 +1,8 @@
 { inputs, outputs, lib, ... }: {
   imports = [
     ./global.nix
-    #./features/desktop/leftwm
     ./features/desktop/hyprland
+    ./features/desktop/hyprland/hyprspace.nix
     ./features/desktop/common/optional/batsignal.nix
     ./features/desktop/common/optional/piper.nix
     ./features/desktop/common/optional/network.nix
@@ -25,7 +25,7 @@
           sensitivity = -0.36;
         }
         {
-          name = "epps/2-elantech-trackpoint";
+          name = "tpps/2-elan-trackpoint";
           accel_profile = "flat";
         }
       ];

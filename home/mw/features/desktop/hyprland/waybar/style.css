@@ -22,11 +22,31 @@ window#waybar {
 	color: @foreground-color;
 	border-radius: 0px;
 	min-width: 10px;
+	/* rectángulo centrado en el borde inferior = hay ventanas */
+	background-image: image(@foreground-color);
+	background-size: 8px 2px;
+	background-repeat: no-repeat;
+	background-position: bottom center;
+}
+
+/* active = workspace del monitor con foco; visible = el mostrado en un
+ * monitor sin foco. El botón con foco lleva LAS DOS clases, así que
+ * visible va antes: a igual especificidad gana la última regla. */
+#workspaces button.visible {
+	color: @foreground-color-alt;
+	/* verde apagado: @background-color-alt casi no contrasta con el fondo
+	 * de la barra (~1.1:1) */
+	background-color: mix(@primary, @background-color, 0.45);
 }
 
 #workspaces button.active {
 	color: @background-color;
-	background: @primary;
+	background-color: @primary;
+}
+
+/* va último: pisa el punto del resto de las reglas */
+#workspaces button.empty {
+	background-image: none;
 }
 
 #cpu.critical {

@@ -1,0 +1,51 @@
+# Escucha el socket de eventos de hyprland y, al desconectarse un monitor,
+# junta las ventanas de sus workspaces huérfanos en el set del monitor donde
+# cayeron, preservando la posición (13 -> 3, estilo dwm).
+#
+# Detección por flag de persistencia: con enable_persistent_workspaces
+# (split-monitor-workspaces), los workspaces propios de cada monitor
+# conectado son persistentes, y unmapMonitor les saca el flag a los del
+# monitor removido. Si no hay workspaces persistentes (p. ej. plugin
+# deshabilitado), no toca nada.
+
+count=10 # tags por monitor, en sintonía con plugin:split-monitor-workspaces:count
+
+merge() {
+	# esperar a que hyprland reasigne los workspaces del monitor caído y el
+	# plugin los des-persista
+	sleep 0.5
+
+	workspaces=$(hyprctl workspaces -j)
+
+	while read -r rogue; do
+		id=$(jq -r '.id' <<<"$rogue")
+		monitor=$(jq -r '.monitor' <<<"$rogue")
+
+		# base del anfitrión = rango de su workspace persistente más bajo
+		minid=$(jq -r --arg mon "$monitor" \
+			'[.[] | select(.monitor == $mon and .ispersistent and .id > 0) | .id] | min // empty' \
+			<<<"$workspaces")
+		[ -n "$minid" ] || continue
+		base=$(( (minid - 1) / count * count ))
+		target=$(( base + (id - 1) % count + 1 ))
+		[ "$target" -ne "$id" ] || continue
+
+		while read -r addr; do
+			hyprctl dispatch movetoworkspacesilent "$target,address:$addr"
+		done < <(hyprctl clients -j |
+			jq -r --argjson ws "$id" '.[] | select(.workspace.id == $ws) | .address')
+	done < <(jq -c '.[] | select(.id > 0 and (.ispersistent | not))' <<<"$workspaces")
+}
+
+# pasada única a mano, p. ej. para limpiar un estado ya roto
+if [ "${1:-}" = "--once" ]; then
+	merge
+	exit 0
+fi
+
+socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+socat -U - UNIX-CONNECT:"$socket" | while IFS= read -r event; do
+	case $event in
+		monitorremoved*) merge ;;
+	esac
+done

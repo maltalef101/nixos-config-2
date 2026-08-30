@@ -1,13 +1,23 @@
 { pkgs, inputs, config, ... }: {
-	imports = [ 
-		../common 
-		./waybar 
-		./wofi 
-		./hyprlock.nix 
-		./hypridle.nix 
-		./hyprsunset.nix 
+	imports = [
+		../common
+		./waybar
+		./wofi
+		./hyprlock.nix
+		./hypridle.nix
+		./hyprsunset.nix
 		./hyprpaper.nix
-		./swaync 
+		./swaync
+	];
+
+	# Wrapper de lock: guard por usuario + LockedHint de logind (hyprlock no
+	# setea el hint, hyprwm/hyprlock#907). Es quien ejecuta hyprlock tanto en
+	# el keybind como en hypridle, así que va en el profile. El override hace
+	# que envuelva el mismo hyprlock que programs.hyprlock (el del flake), no
+	# el de nixpkgs.
+	home.packages = [
+		(pkgs.hyprlock-lock.override { hyprlock = config.programs.hyprlock.package; })
+		pkgs.hypr-merge-rogues
 	];
 
 	home.pointerCursor = {
@@ -35,12 +45,21 @@
 		enable = true;
 		xwayland.enable = true;
 
+		# Workspaces por monitor, estilo dwm: cada monitor tiene sus propios
+		# tags 1-10 (internamente 1-10, 11-20, ...). Vía keyword plugin= y no
+		# plugins=[] de hm (exec-once): hyprland carga el .so post-parse y
+		# re-parsea solo, así los binds split-* no dan "invalid dispatcher"
+		# al arrancar.
+		extraConfig = "plugin = ${inputs.split-monitor-workspaces.packages.${pkgs.system}.split-monitor-workspaces}/lib/libsplit-monitor-workspaces.so";
+
     # HACER: migrar config a lua? hyprland cambió su formato en la última
     # release a la fecha (13062026) y na ta bueno qsy
     configType = "hyprlang";
 
 		settings = {
 			plugin = {
+				"split-monitor-workspaces".count = 10;
+
 				touch_gestures = {
 					workspace_swipe_fingers = 3;
 					workspace_swipe_edge = "d";
@@ -64,7 +83,10 @@
 
 			# hyprpaper lo gestiona services.hyprpaper (systemd user unit); no
 			# lanzarlo acá también o se duplica y crashea (conflicto de socket).
-			exec-once = "waybar & blueman-applet & nm-applet";
+			exec-once = [
+				"waybar & blueman-applet & nm-applet"
+				"hypr-merge-rogues"
+			];
 
 			general = {
 				gaps_in = 8;
@@ -160,11 +182,11 @@
 				"$mod, Return, exec, $terminal"
 				"$mod, space, togglefloating"
 				"$mod, q, killactive"
-				"$mod, Tab, workspace, previous"
+				"$mod, Tab, workspace, previous_per_monitor"
 				"$mod, f, fullscreen"
 
-				"$mod, j, cyclenext, prev"
-				"$mod, k, cyclenext"
+				"$mod, j, layoutmsg, cyclenext"
+				"$mod, k, layoutmsg, cycleprev"
 				"$mod SHIFT, k, layoutmsg, swapprev"
 				"$mod SHIFT, j, layoutmsg, swapnext"
 				"$mod SHIFT, Return, layoutmsg, swapwithmaster"
@@ -174,11 +196,14 @@
 				"$mod, h, focusmonitor, -1"
 				"$mod SHIFT, l, movewindow, mon:+1"
 				"$mod SHIFT, h, movewindow, mon:-1"
+				# junta ventanas varadas en workspaces fuera del rango del
+				# monitor (p. ej. tras desconectar uno)
+				"$mod SHIFT, g, split-grabroguewindows"
 
 				"$mod, d, exec, wofi -S run"
 				"$mod SHIFT, d, exec, wofi -S drun"
 
-				"$mod Control_L, x, exec, hyprlock"
+				"$mod Control_L, x, exec, hyprlock-lock"
 
 				"Alt_L, Space, exec, swaync-client --close-latest"
 				"Alt_L SHIFT, Space, exec, swaync-client -C"
@@ -200,8 +225,8 @@
 				builtins.concatLists (builtins.genList (i:
 					let ws = i + 1;
 					in [
-						"$mod, code:1${toString i}, focusworkspaceoncurrentmonitor, ${toString ws}"
-						"$mod SHIFT, code:1${toString i}, movetoworkspacesilent, ${toString ws}"
+						"$mod, code:1${toString i}, split-workspace, ${toString ws}"
+						"$mod SHIFT, code:1${toString i}, split-movetoworkspacesilent, ${toString ws}"
 					]
 				)
 				10)

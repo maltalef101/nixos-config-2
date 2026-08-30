@@ -35,6 +35,15 @@
 				"hyprland/workspaces" = {
 					active-only = false;
 					all-outputs = false;
+					# hyprsplit numera por monitor (1-10, 11-20, ...); acá se
+					# muestran todos como 1-10
+					format = "{icon}";
+					format-icons = builtins.listToAttrs (builtins.concatLists (builtins.genList (m:
+						builtins.genList (i: {
+							name = toString (m * 10 + i + 1);
+							value = toString (i + 1);
+						}) 10
+					) 3));
 				};
 
 				"hyprland/window" = {
