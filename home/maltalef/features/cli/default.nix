@@ -6,7 +6,8 @@
 	./nvim 
 	./tmux.nix 
 	./starship.nix 
-	./gpg.nix 
+	./gpg.nix
+	./pass.nix
 	./superfile.nix
   ];
 
