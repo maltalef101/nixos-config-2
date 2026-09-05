@@ -40,6 +40,10 @@
 		};
 	};
 
+	# el portal Settings (impl gtk) lee color-scheme de dconf; sin esto las apps
+	# portal-aware (Signal/Electron 43+) ven "no preference" y caen a light mode
+	dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
+
 	wayland.windowManager.hyprland = {
 		enable = true;
 		xwayland.enable = true;
