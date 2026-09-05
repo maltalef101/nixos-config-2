@@ -18,6 +18,12 @@
 	home.packages = [
 		(pkgs.hyprlock-lock.override { hyprlock = config.programs.hyprlock.package; })
 		pkgs.hypr-merge-rogues
+
+		# pass sin terminal: tessen sobre wofi; wl-clipboard para copiar
+		# (también lo necesita pass -c) y wtype para el autotype de tessen
+		pkgs.tessen
+		pkgs.wl-clipboard
+		pkgs.wtype
 	];
 
 	home.pointerCursor = {
@@ -202,6 +208,9 @@
 
 				"$mod, d, exec, wofi -S run"
 				"$mod SHIFT, d, exec, wofi -S drun"
+
+				# menú de pass: copiar password/OTP o autotype
+				"$mod, p, exec, tessen -d wofi"
 
 				"$mod Control_L, x, exec, hyprlock-lock"
 

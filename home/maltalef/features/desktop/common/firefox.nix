@@ -8,7 +8,7 @@ in {
 
     profiles.maltalef = {
       bookmarks = { };
-      extensions.packages = with addons; [ ublock-origin vimium darkreader ];
+      extensions.packages = with addons; [ ublock-origin vimium darkreader browserpass ];
 	  search.default = "ddg";
 	  search.force = true;
 	  
@@ -45,6 +45,13 @@ in {
 		}
 	  '';
     };
+  };
+
+  # host de native messaging para browserpass-ce; el path del store no sale
+  # de PASSWORD_STORE_DIR sino de la config de la extensión (una vez, en su UI)
+  programs.browserpass = {
+    enable = true;
+    browsers = [ "firefox" ];
   };
 
   xdg.mimeApps.defaultApplications = {
