@@ -2,7 +2,6 @@
   imports = [
     ./global.nix
     ./features/desktop/hyprland
-    ./features/desktop/hyprland/hyprspace.nix
     ./features/desktop/common/optional/batsignal.nix
     ./features/desktop/common/optional/piper.nix
     ./features/desktop/common/optional/network.nix
