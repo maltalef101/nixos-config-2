@@ -137,7 +137,10 @@
 			};
 
 			cursor = {
-				no_warps = true;
+				# warps habilitados (default): con no_warps, vaciar un workspace vía
+				# movetoworkspacesilent dispara refocus() y el foco salta al monitor
+				# donde quedó el cursor (hyprwm/Hyprland#13770)
+				persistent_warps = true;
 				inactive_timeout = 2;
 				enable_hyprcursor = false; # capitaine-cursors doesn't have hyprcursor support obviously
 			};
