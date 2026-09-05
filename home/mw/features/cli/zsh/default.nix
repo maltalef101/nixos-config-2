@@ -69,7 +69,15 @@
 	
 					autoload edit-command-line; zle -N edit-command-line
 					bindkey '^e' edit-command-line
-	
+
+					# búsqueda incremental estilo vim: / y ? en modo normal;
+					# ^R/^S saltan entre matches dentro del minibuffer (los keymaps
+					# vi no traen esos bindings como emacs, e isearch está vacío)
+					bindkey -M vicmd '/' history-incremental-pattern-search-backward
+					bindkey -M vicmd '?' history-incremental-pattern-search-forward
+					bindkey -M isearch '^R' history-incremental-search-backward
+					bindkey -M isearch '^S' history-incremental-search-forward
+
 					setopt correct
 				''; 
 			in 
