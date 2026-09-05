@@ -1,0 +1,5 @@
+# greetd y gdm ejecutan la sesión sin pasar por ningún shell, así que las
+# hm-session-vars (GNUPGHOME, PASSWORD_STORE_DIR, ...) nunca llegan a la
+# sesión gráfica. El login shell del usuario las carga (.zprofile) antes
+# de ejecutar el launcher real.
+exec zsh -lc start-hyprland

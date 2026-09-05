@@ -4,4 +4,5 @@
 	hyprshot-region = pkgs.callPackage ./scripts/hyprshot-region { };
 	hyprlock-lock = pkgs.callPackage ./scripts/hyprlock-lock { };
 	hypr-merge-rogues = pkgs.callPackage ./scripts/hypr-merge-rogues { };
+	start-hyprland-login = pkgs.callPackage ./scripts/start-hyprland-login { };
 }

@@ -48,7 +48,11 @@ in {
     #  ${pkgs.greetd.tuigreet}/bin/tuigreet --time --remember-session --power-shutdown "${commands.shutdown}" --power-reboot "${commands.reboot}"'';
   };
 
+  # el wrapper (pkgs/scripts/start-hyprland-login) pasa por un login shell
+  # para que las hm-session-vars lleguen a la sesión gráfica
+  config.environment.systemPackages = [ pkgs.start-hyprland-login ];
+
   config.environment.etc."greetd/environments".text = ''
-  start-hyprland
+  start-hyprland-login
   '';
 }
