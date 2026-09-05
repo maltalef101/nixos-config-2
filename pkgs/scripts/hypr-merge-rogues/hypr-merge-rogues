@@ -2,50 +2,102 @@
 # junta las ventanas de sus workspaces huérfanos en el set del monitor donde
 # cayeron, preservando la posición (13 -> 3, estilo dwm).
 #
-# Detección por flag de persistencia: con enable_persistent_workspaces
-# (split-monitor-workspaces), los workspaces propios de cada monitor
-# conectado son persistentes, y unmapMonitor les saca el flag a los del
-# monitor removido. Si no hay workspaces persistentes (p. ej. plugin
-# deshabilitado), no toca nada.
+# Detección por snapshot de rangos, no por flag de persistencia: hyprland
+# le saca el flag a todo workspace sin regla `persistent` en el config
+# (ensurePersistentWorkspacesPresent, corre en cada connect/reload), así
+# que el flag que setea split-monitor-workspaces nunca queda observable.
+# En su lugar, mientras el mapeo está sano (arranque, monitoradded,
+# configreloaded) se registra la base del rango de cada monitor a partir
+# del id mínimo presente en él; al caerse un monitor, es huérfano todo
+# workspace fuera del rango snapshoteado de su monitor actual.
 
 count=10 # tags por monitor, en sintonía con plugin:split-monitor-workspaces:count
 
-merge() {
-	# esperar a que hyprland reasigne los workspaces del monitor caído y el
-	# plugin los des-persista
-	sleep 0.5
+declare -A base=() # nombre de monitor -> base de su rango (0, 10, 20, ...)
 
-	workspaces=$(hyprctl workspaces -j)
-
-	while read -r rogue; do
-		id=$(jq -r '.id' <<<"$rogue")
-		monitor=$(jq -r '.monitor' <<<"$rogue")
-
-		# base del anfitrión = rango de su workspace persistente más bajo
-		minid=$(jq -r --arg mon "$monitor" \
-			'[.[] | select(.monitor == $mon and .ispersistent and .id > 0) | .id] | min // empty' \
-			<<<"$workspaces")
-		[ -n "$minid" ] || continue
-		base=$(( (minid - 1) / count * count ))
-		target=$(( base + (id - 1) % count + 1 ))
-		[ "$target" -ne "$id" ] || continue
-
-		while read -r addr; do
-			hyprctl dispatch movetoworkspacesilent "$target,address:$addr"
-		done < <(hyprctl clients -j |
-			jq -r --argjson ws "$id" '.[] | select(.workspace.id == $ws) | .address')
-	done < <(jq -c '.[] | select(.id > 0 and (.ispersistent | not))' <<<"$workspaces")
+# base por monitor = piso del id mínimo presente. Solo es válido con el
+# mapeo sano (cada monitor tiene únicamente sus propios workspaces); dos
+# monitores con la misma base delatan un mapeo a medio armar (p. ej. el
+# plugin todavía no remapeó), así que se reintenta.
+snapshot() {
+	local mon minid b dup
+	for _ in 1 2 3 4 5; do
+		base=()
+		dup=0
+		local -A seen=()
+		while IFS=$'\t' read -r mon minid; do
+			b=$(( (minid - 1) / count * count ))
+			if [ -n "${seen[$b]-}" ]; then
+				dup=1
+			fi
+			seen[$b]=1
+			base[$mon]=$b
+		done < <(hyprctl workspaces -j | jq -r '
+			map(select(.id > 0)) | group_by(.monitor)[] |
+			[.[0].monitor, (map(.id) | min)] | @tsv')
+		if [ "$dup" -eq 0 ]; then
+			return 0
+		fi
+		sleep 1
+	done
+	return 0
 }
 
-# pasada única a mano, p. ej. para limpiar un estado ya roto
+merge() {
+	# esperar a que hyprland mueva los workspaces del monitor caído
+	sleep 0.5
+
+	local workspaces clients ws id monitor b target addr
+	workspaces=$(hyprctl workspaces -j)
+	clients=$(hyprctl clients -j)
+
+	while read -r ws; do
+		id=$(jq -r '.id' <<<"$ws")
+		monitor=$(jq -r '.monitor' <<<"$ws")
+
+		b=${base[$monitor]-}
+		if [ -z "$b" ]; then
+			continue
+		fi
+		# dentro del rango del monitor -> no es huérfano
+		if [ "$id" -gt "$b" ] && [ "$id" -le $(( b + count )) ]; then
+			continue
+		fi
+
+		target=$(( b + (id - 1) % count + 1 ))
+
+		while read -r addr; do
+			hyprctl dispatch movetoworkspacesilent "$target,address:$addr" || true
+		done < <(jq -r --argjson ws "$id" \
+			'.[] | select(.workspace.id == $ws) | .address' <<<"$clients")
+	done < <(jq -c '.[] | select(.id > 0)' <<<"$workspaces")
+
+	# el mapeo quedó sano de nuevo; re-snapshotear para el próximo evento
+	snapshot
+}
+
+# pasada única a mano, p. ej. para limpiar un estado ya roto. Ojo: la base
+# se infiere del estado actual, así que si el monitor restante quedó solo
+# con workspaces ajenos (p. ej. clamshell sin merge previo) no hay cómo
+# distinguir el rango propio.
 if [ "${1:-}" = "--once" ]; then
+	snapshot
 	merge
 	exit 0
 fi
+
+# dejar que el plugin termine el mapeo inicial antes del primer snapshot
+sleep 1
+snapshot
 
 socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 socat -U - UNIX-CONNECT:"$socket" | while IFS= read -r event; do
 	case $event in
 		monitorremoved*) merge ;;
+		# el rango de un monitor puede cambiar al (re)mapearse
+		monitoradded* | configreloaded*)
+			sleep 0.5
+			snapshot
+			;;
 	esac
 done
