@@ -126,7 +126,8 @@
 			};
 
 			input = {
-				kb_layout = "es";
+				kb_layout = "us";
+				kb_variant = "altgr-intl";
 				kb_options = "caps:swapescape";
 
 				repeat_rate = 30;
