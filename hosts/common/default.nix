@@ -3,6 +3,7 @@
     # auto-upgrade.nix fuera de uso: upgradeaba vía channel, divergiendo del
     # flake; pendiente rehacerlo flake-based de forma segura
     ./locale.nix
+    ./mdns.nix
     ./nix.nix
     ./openssh.nix
     ./doas.nix
