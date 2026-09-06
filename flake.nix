@@ -22,7 +22,8 @@
 
 	hyprland = {
 		# Pineado al tag de release: los plugins se portan por release, no
-		# siguen master. Actualizar en tándem con hyprspace y hyprsplit.
+		# siguen master. Actualizar en tándem con split-monitor-workspaces
+		# y hyprgrass.
 		# Sin nixpkgs.follows: 0.56 pide deps más nuevas que nuestro nixpkgs
 		# (wayland-protocols >= 1.49, libinput >= 1.29) y con su propio lock
 		# el binario viene de hyprland.cachix.org en vez de compilarse.
@@ -36,14 +37,6 @@
 
 	hyprgrass = {
 		url = "github:horriblename/hyprgrass";
-		inputs.hyprland.follows = "hyprland";
-	};
-
-	hyprspace = {
-		# Upstream (KZDKM) no compila contra hyprland >= 0.55; este es el port
-		# a la API V2 (KZDKM/Hyprspace#238) pineado por sha, verificado contra
-		# v0.56.0. Volver a KZDKM/Hyprspace cuando se mergee el PR.
-		url = "github:ImanolBarba/Hyprspace/0799be7464fac7ea959b7c6c7809dadd6c21c5aa";
 		inputs.hyprland.follows = "hyprland";
 	};
 

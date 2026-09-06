@@ -83,7 +83,7 @@ SOPS-nix is used for secrets management. Keys are configured in `.sops.yaml` (PG
 
 - `nixpkgs` → `nixos-unstable`
 - `home-manager` follows nixpkgs
-- `hyprland`, `hyprlock`, `hyprgrass`, `hyprspace`, `hyprpaper` — Wayland compositor ecosystem (each follows hyprland's nixpkgs)
+- `hyprland`, `hyprlock`, `hyprgrass`, `hyprpaper` — Wayland compositor ecosystem (each follows hyprland's nixpkgs)
 - `sops-nix` — secrets
 - `nix-gaming` — gaming optimizations
 - `nix-minecraft` — Minecraft server support
