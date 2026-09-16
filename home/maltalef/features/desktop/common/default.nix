@@ -3,10 +3,11 @@
 	#./birdtray.nix
 	#./unclutter.nix
 	./zathura.nix
-    ./alacritty
+    ./foot.nix
     #./dragon.nix
     ./firefox.nix
     ./font.nix
+    ./mimeapps.nix
     # ./redshift.nix
     # ./rofi.nix
     ./xdg.nix

@@ -18,7 +18,7 @@ in
   systemd.user = {
     startServices = "sd-switch";
 	  sessionVariables = {
-      TERMINAL = "alacritty";
+      TERMINAL = "foot";
 	    PAGER = "less";
       EDITOR = "nvim";
       VISUAL = "nvim";
