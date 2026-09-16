@@ -1,0 +1,30 @@
+--- a/src/desktop/view/Window.cpp	2026-09-07 16:04:18.751168816 -0300
++++ b/src/desktop/view/Window.cpp	2026-09-07 16:04:33.340770945 -0300
+@@ -2585,6 +2585,7 @@
+         g_pHyprRenderer->shouldRenderWindow(m_self.lock()) && !m_ruleApplicator->noAnim().valueOrDefault() ? g_pHyprRenderer->makeSnapshotFB(m_self.lock()) : nullptr;
+ 
+     // swallowing
++    PHLWINDOW RESTOREDSWALLOWEE = nullptr;
+     if (const auto SWALLOWEE = m_swallowee.lock()) {
+         if (SWALLOWEE->m_isMapped && SWALLOWEE->m_currentlySwallowed) {
+             SWALLOWEE->m_currentlySwallowed = false;
+@@ -2594,6 +2595,7 @@
+                 SWALLOWEE->m_groupSwallowed = true; // flag for the swallowed window to be created into the group where it belongs when auto_group = false.
+ 
+             g_layoutManager->newTarget(SWALLOWEE->layoutTarget(), m_workspace->m_space);
++            RESTOREDSWALLOWEE = SWALLOWEE;
+         }
+ 
+         SWALLOWEE->m_groupSwallowed = false;
+@@ -2646,6 +2648,11 @@
+         static auto FOCUSONCLOSE = CConfigValue<Config::INTEGER>("input:focus_on_close");
+         PHLWINDOW   candidate    = nextInGroup;
+ 
++        // prefer the restored swallowee: closing a swallower should return focus
++        // to the window it swallowed, not to the layout's next candidate
++        if (!candidate)
++            candidate = RESTOREDSWALLOWEE;
++
+         if (!candidate) {
+             if (*FOCUSONCLOSE == 1)
+                 candidate = (Desktop::viewState()->hitTest().windowAt(g_pInputManager->getMouseCoordsInternal(),

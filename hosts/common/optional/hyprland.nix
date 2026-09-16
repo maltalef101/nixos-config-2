@@ -20,10 +20,20 @@ in {
 	programs.hyprland = {
 		enable = true;
 		xwayland.enable = true;
-		package = inputs.hyprland.packages.${pkgs.system}.hyprland;
+		# parche: devolver el foco a la ventana des-tragada al cerrar el
+		# swallower. El candidato de foco lo elige el layout relativo a la
+		# ventana que cierra, y la restaurada es un target nuevo sin relación
+		# con esa posición -> ganaba la otra ventana del workspace. Upstream
+		# lo descartó (hyprwm/Hyprland#4296). Revisar el rebase al bumpear el
+		# input de hyprland.
+		package = inputs.hyprland.packages.${pkgs.system}.hyprland.overrideAttrs (old: {
+			patches = (old.patches or [ ]) ++ [ ./hyprland-unswallow-focus.patch ];
+		});
 	};
 
-	services.displayManager.sessionPackages = [ hyprland-login-session ];
+	# mkForce: programs.hyprland mete además la sesión stock del paquete, que
+	# arranca sin login shell (sin hm-session-vars); dejar solo la nuestra
+	services.displayManager.sessionPackages = lib.mkForce [ hyprland-login-session ];
 
 	# Sin esto, un display manager sin sesión recordada (p. ej. GDM) cae en su
 	# fallback interno (gnome-session), que no está instalado -> falla al
