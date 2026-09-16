@@ -22,9 +22,9 @@
   };
 
   xdg.mimeApps.defaultApplications = {
-    "text/html" = [ "zathura.desktop" ];
-    "text/xml" = [ "zathura.desktop" ];
-    "x-scheme-handler/http" = [ "zathura.desktop" ];
-    "x-scheme-handler/https" = [ "zathura.desktop" ];
+    "application/pdf" = [ "org.pwmt.zathura.desktop" ];
+    "application/epub+zip" = [ "org.pwmt.zathura.desktop" ];
+    "image/vnd.djvu" = [ "org.pwmt.zathura.desktop" ];
+    "application/vnd.comicbook+zip" = [ "org.pwmt.zathura.desktop" ];
   };
 }
