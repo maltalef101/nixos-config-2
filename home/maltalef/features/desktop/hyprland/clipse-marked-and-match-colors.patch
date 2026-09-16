@@ -1,0 +1,121 @@
+diff -ruN a/app/delegate.go b/app/delegate.go
+--- a/app/delegate.go	2026-09-16 12:25:28.967776553 -0300
++++ b/app/delegate.go	2026-09-16 12:41:08.591523667 -0300
+@@ -3,7 +3,6 @@
+ import (
+ 	"fmt"
+ 	"io"
+-	"strings"
+ 
+ 	"github.com/charmbracelet/bubbles/list"
+ 	tea "github.com/charmbracelet/bubbletea"
+@@ -53,11 +52,11 @@
+ 	switch {
+ 
+ 	case m.SettingFilter():
+-		if strings.Contains(
+-			strings.ToLower(i.titleFull),
+-			strings.ToLower(m.FilterValue()),
+-		) && m.FilterValue() != "" {
+-			renderStr = d.itemSelectedStyle(i)
++		// los runes matcheados salen del filtro fuzzy del list (matchea
++		// subsecuencias); el strings.Contains que había acá dejaba sin
++		// resaltar los matches no contiguos
++		if matchedRunes := m.MatchesForItem(index); len(matchedRunes) > 0 {
++			renderStr = d.itemMatchedStyle(i, matchedRunes)
+ 		} else {
+ 			renderStr = d.itemFilterStyle(i)
+ 		}
+diff -ruN a/app/styles.go b/app/styles.go
+--- a/app/styles.go	2026-09-16 12:25:28.968264169 -0300
++++ b/app/styles.go	2026-09-16 12:26:27.588720356 -0300
+@@ -85,8 +85,19 @@
+ 
+ func (d itemDelegate) itemSelectedStyle(i item) string {
+ 
++	// color propio para los ítems marcados con select; si el theme no lo
++	// define, cae al color del cursor como antes del patch
++	markedTitle := d.theme.MarkedTitle
++	if markedTitle == "" {
++		markedTitle = d.theme.SelectedTitle
++	}
++	markedDesc := d.theme.MarkedDesc
++	if markedDesc == "" {
++		markedDesc = d.theme.SelectedDesc
++	}
++
+ 	titleStyle = style.
+-		Foreground(lipgloss.Color(d.theme.SelectedTitle)).
++		Foreground(lipgloss.Color(markedTitle)).
+ 		PaddingLeft(2).
+ 		Render(i.titleBase)
+ 
+@@ -98,7 +109,7 @@
+ 	}
+ 
+ 	descStyle = style.
+-		Foreground(lipgloss.Color(d.theme.SelectedDesc)).
++		Foreground(lipgloss.Color(markedDesc)).
+ 		PaddingLeft(2).
+ 		Render(i.descriptionBase)
+ 
+@@ -109,6 +120,38 @@
+ 	return fmt.Sprintf("%s\n%s", titleStyle, descStyle)
+ }
+ 
++// estilo para ítems que matchean mientras se tipea el filtro: pinta los
++// runes matcheados con FilteredMatch (que upstream define pero nunca usa),
++// igual que el delegate default de bubbletea
++func (d itemDelegate) itemMatchedStyle(i item, matchedRunes []int) string {
++	unmatched := style.Foreground(lipgloss.Color(d.theme.NormalTitle)).Inline(true)
++	matched := unmatched.
++		Foreground(lipgloss.Color(d.theme.FilteredMatch)).
++		Underline(true)
++
++	matchedTitle := style.
++		PaddingLeft(2).
++		Render(lipgloss.StyleRunes(i.titleBase, matchedRunes, matched, unmatched))
++
++	if !config.ClipseConfig.EnableDescription {
++		if i.pinned {
++			matchedTitle += styledPin(d.theme)
++		}
++		return matchedTitle
++	}
++
++	matchedDesc := style.
++		Foreground(lipgloss.Color(d.theme.NormalDesc)).
++		PaddingLeft(2).
++		Render(i.descriptionBase)
++
++	if i.pinned {
++		matchedDesc += styledPin(d.theme)
++	}
++
++	return fmt.Sprintf("%s\n%s", matchedTitle, matchedDesc)
++}
++
+ func (d itemDelegate) itemNormalStyle(i item) string {
+ 	titleStyle = style.
+ 		Foreground(lipgloss.Color(d.theme.NormalTitle)).
+diff -ruN a/config/theme.go b/config/theme.go
+--- a/config/theme.go	2026-09-16 12:25:28.969018316 -0300
++++ b/config/theme.go	2026-09-16 12:25:48.574551937 -0300
+@@ -19,6 +19,8 @@
+ 	NormalDesc         string `json:"NormalDesc"`
+ 	DimmedDesc         string `json:"DimmedDesc"`
+ 	SelectedDesc       string `json:"SelectedDesc"`
++	MarkedTitle        string `json:"MarkedTitle"`
++	MarkedDesc         string `json:"MarkedDesc"`
+ 	StatusMsg          string `json:"StatusMsg"`
+ 	PinIndicatorColor  string `json:"PinIndicatorColor"`
+ 	SelectedBorder     string `json:"SelectedBorder"`
+@@ -106,6 +108,8 @@
+ 		NormalDesc:         "#808080",
+ 		DimmedDesc:         "#808080",
+ 		SelectedDesc:       "#FF69B4",
++		MarkedTitle:        "#FF69B4",
++		MarkedDesc:         "#FF69B4",
+ 		StatusMsg:          "#2ecc71",
+ 		PinIndicatorColor:  "#FFD700",
+ 		SelectedBorder:     "#3498db",
