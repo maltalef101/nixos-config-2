@@ -2,12 +2,14 @@
 	imports = [
 		../common
 		./waybar
-		./wofi
+		./fuzzel.nix
 		./hyprlock.nix
 		./hypridle.nix
 		./hyprsunset.nix
 		./hyprpaper.nix
 		./swaync
+		./tessen.nix
+		./clipse.nix
 	];
 
 	# Wrapper de lock: guard por usuario + LockedHint de logind (hyprlock no
@@ -18,12 +20,7 @@
 	home.packages = [
 		(pkgs.hyprlock-lock.override { hyprlock = config.programs.hyprlock.package; })
 		pkgs.hypr-merge-rogues
-
-		# pass sin terminal: tessen sobre wofi; wl-clipboard para copiar
-		# (también lo necesita pass -c) y wtype para el autotype de tessen
-		pkgs.tessen
-		pkgs.wl-clipboard
-		pkgs.wtype
+		pkgs.hypr-cycle-monitor
 	];
 
 	home.pointerCursor = {
@@ -84,7 +81,7 @@
 			};
 
 			"$mod" = "SUPER";
-			"$terminal" = "alacritty";
+			"$terminal" = "footclient";
 
 #			env = [
 #				"HYPRCURSOR_THEME,capitaine-cursors"
@@ -122,7 +119,13 @@
 				## workspaces that have a rule to execute something in them, it doesn't get
 				## focused on spawn
 
-				initial_workspace_tracking = 0; 
+				initial_workspace_tracking = 0;
+
+				# swallow scopeado por app-id: solo la terminal del file browser
+				# ($mod+e / xdg-open en directorios) se traga al abrir una app
+				# gráfica; los foot comunes (clase "foot") no matchean
+				enable_swallow = true;
+				swallow_regex = "^(superfile)$";
 			};
 
 			input = {
@@ -171,10 +174,21 @@
 				rounding = 2;
 			};
 
+			# geometría vía windowrule por app-id y no exec rules inline: hyprland
+			# aplica las exec rules por PID del proceso lanzado, y con footclient
+			# la ventana la crea el server (otro PID), así que nunca matchean
 			workspace = [
-				"special:volume, on-created-empty:[float; size 950 400; move 20 50] alacritty -e pulsemixer"
+				"special:volume, on-created-empty:footclient --app-id=foot-volume pulsemixer"
 				"special:chat, on-created-empty:telegram-desktop"
-				"special:scratchpad, on-created-empty:[float; size 700 400; center] alacritty"
+				"special:scratchpad, on-created-empty:footclient --app-id=foot-scratchpad"
+			];
+
+			# sintaxis nueva (0.56): campos "clave valor" separados por coma,
+			# matchers con prefijo match: y efectos booleanos con valor explícito
+			windowrule = [
+				"float on, size 950 400, move 20 50, match:class ^(foot-volume)$"
+				"float on, size 700 400, center on, match:class ^(foot-scratchpad)$"
+				"float on, size 800 800, center on, match:class ^(clipse)$"
 			];
 
 			bindm = [
@@ -206,19 +220,32 @@
 				"$mod SHIFT, Return, layoutmsg, swapwithmaster"
 				"$mod SHIFT, code:60, layoutmsg, addmaster"
 				"$mod SHIFT, code:59, layoutmsg, removemaster"
-				"$mod, l, focusmonitor, +1"
-				"$mod, h, focusmonitor, -1"
-				"$mod SHIFT, l, movewindow, mon:+1"
-				"$mod SHIFT, h, movewindow, mon:-1"
+				# anillo espacial (por columnas), no el +1/-1 por orden de
+				# creación: h/l siguen la disposición física de los monitores
+				"$mod, l, exec, hypr-cycle-monitor next"
+				"$mod, h, exec, hypr-cycle-monitor prev"
+				"$mod SHIFT, l, exec, hypr-cycle-monitor --move next"
+				"$mod SHIFT, h, exec, hypr-cycle-monitor --move prev"
 				# junta ventanas varadas en workspaces fuera del rango del
 				# monitor (p. ej. tras desconectar uno)
 				"$mod SHIFT, g, split-grabroguewindows"
 
-				"$mod, d, exec, wofi -S run"
-				"$mod SHIFT, d, exec, wofi -S drun"
+				# launcher (fuzzel.nix): apps + binarios del PATH; con shift,
+				# solo apps (el drun de antes)
+				"$mod, d, exec, fuzzel --list-executables-in-path"
+				"$mod SHIFT, d, exec, fuzzel"
 
-				# menú de pass: copiar password/OTP o autotype
-				"$mod, p, exec, tessen -d wofi"
+				# file browser en ~; foot standalone y no $terminal (footclient):
+				# el swallow necesita que la ventana tenga PID propio
+				"$mod, e, exec, foot --app-id=superfile -D ~ superfile"
+
+				# menú de pass (tessen.nix): Enter copia el password, Ctrl+o el
+				# OTP, Ctrl+Enter abre el menú de campos
+				"$mod, p, exec, tessen"
+
+				# historial del clipboard (clipse.nix): Enter copia, space
+				# previsualiza (sixel), s marca, / filtra, p pinnea
+				"$mod, c, exec, footclient --app-id=clipse clipse"
 
 				"$mod Control_L, x, exec, hyprlock-lock"
 
