@@ -1,4 +1,4 @@
-{ pkgs, lib, ... }: {
+{ pkgs, lib, config, ... }: {
   programs.superfile = {
     enable = true;
 	settings = {
@@ -46,4 +46,24 @@
   };
 
   xdg.configFile."superfile/theme/gruvbox-dark-hard.toml".source = ./gruvbox-dark-hard.toml;
+
+  # integración xdg solo en hosts desktop (los únicos que habilitan mimeApps);
+  # en un host headless esto no genera nada
+  #
+  # foot standalone con app-id propio, no footclient: las ventanas del server
+  # comparten PID y el swallow de hyprland no sabría cuál tragar; el app-id
+  # además scopea el swallow_regex a esta terminal y no a cualquier foot
+  xdg.desktopEntries = lib.mkIf config.xdg.mimeApps.enable {
+	superfile = {
+	  name = "superfile";
+	  exec = "foot --app-id=superfile superfile %f";
+	  terminal = false;
+	  mimeType = [ "inode/directory" ];
+	  categories = [ "System" "FileManager" ];
+	};
+  };
+
+  xdg.mimeApps.defaultApplications = lib.mkIf config.xdg.mimeApps.enable {
+	"inode/directory" = [ "superfile.desktop" ];
+  };
 }
