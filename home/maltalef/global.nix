@@ -29,6 +29,9 @@ in
   programs = {
     home-manager.enable = true;
     git.enable = true;
+    # index de apropos para los man pages del perfil de home-manager;
+    # el cache del sistema (documentation.man.generateCaches) no los cubre
+    man.generateCaches = true;
   };
 
   home = {

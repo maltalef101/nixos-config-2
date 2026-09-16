@@ -54,6 +54,10 @@
 	}
   ];
 
+  # genera el index.db de mandb en build-time; sin esto man -k/apropos no
+  # encuentran nada porque en NixOS nada corre mandb en runtime
+  documentation.man.generateCaches = true;
+
   hardware.enableRedistributableFirmware = true;
 
   # FUCK MY ISP FOR BLOCKING TPB
