@@ -18,10 +18,10 @@
 				{ name = "tpps/2-elan-trackpoint"; accel_profile = "flat"; }
 			];
 
-			monitor = [ 
-				"eDP-1, 1920x1080, 0x0, 1" 
+			monitor = [
+				"eDP-1, 1920x1080, 0x0, 1"
 				"HDMI-A-1, 1920x1080@100, 0x-1080, 1"
-				"DP-2, 1920x1080, -1920x-540, 1"
+				"DP-2, 1920x1080, 1920x0, 1"
 			];
 	  };
   };
