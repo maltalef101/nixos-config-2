@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# escanea un QR de OTP en pantalla (selección de región) y agrega la URI
+# otpauth:// a una entrada existente de pass
+
+entry="${1-}"
+if [ -z "$entry" ]; then
+	echo "uso: pass-otp-add <entrada-de-pass>" >&2
+	exit 1
+fi
+
+tmp="$(mktemp --suffix=.png)"
+trap 'rm -f "$tmp"' EXIT
+
+hyprshot -m region --raw --silent > "$tmp"
+
+if ! uri="$(zbarimg -q --raw "$tmp")"; then
+	echo "no se pudo leer ningún código en la captura" >&2
+	exit 1
+fi
+
+case "$uri" in
+	otpauth://*) ;;
+	*)
+		echo "el QR no contiene una URI otpauth://: $uri" >&2
+		exit 1
+		;;
+esac
+
+printf '%s\n' "$uri" | pass otp append "$entry"

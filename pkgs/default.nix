@@ -5,5 +5,6 @@
 	hyprlock-lock = pkgs.callPackage ./scripts/hyprlock-lock { };
 	hypr-merge-rogues = pkgs.callPackage ./scripts/hypr-merge-rogues { };
 	hypr-cycle-monitor = pkgs.callPackage ./scripts/hypr-cycle-monitor { };
+	pass-otp-add = pkgs.callPackage ./scripts/pass-otp-add { };
 	start-hyprland-login = pkgs.callPackage ./scripts/start-hyprland-login { };
 }
