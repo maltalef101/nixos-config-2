@@ -1,0 +1,37 @@
+# Cicla el foco (o mueve la ventana activa, con --move) entre monitores en
+# orden espacial de columnas (x, después y), en vez del orden de creación
+# que usa focusmonitor +1/-1. Así el anillo sigue la disposición física:
+# p. ej. HDMI (0,-1080) -> eDP (0,0) -> DP-2 (1920,0).
+
+move=0
+if [ "${1:-}" = "--move" ]; then
+	move=1
+	shift
+fi
+
+dir=${1:?uso: hypr-cycle-monitor [--move] next|prev}
+
+# un solo snapshot para nombres y foco, para que no se corran entre sí
+json=$(hyprctl monitors -j)
+mapfile -t mons < <(jq -r 'sort_by(.x, .y) | .[].name' <<<"$json")
+focused=$(jq -r 'sort_by(.x, .y) | map(.focused) | index(true)' <<<"$json")
+
+n=${#mons[@]}
+if [ "$focused" = "null" ] || [ "$n" -lt 2 ]; then
+	exit 0
+fi
+
+case $dir in
+	next) target=$(( (focused + 1) % n )) ;;
+	prev) target=$(( (focused - 1 + n) % n )) ;;
+	*)
+		echo "uso: hypr-cycle-monitor [--move] next|prev" >&2
+		exit 1
+		;;
+esac
+
+if [ "$move" -eq 1 ]; then
+	hyprctl dispatch movewindow "mon:${mons[$target]}"
+else
+	hyprctl dispatch focusmonitor "${mons[$target]}"
+fi
