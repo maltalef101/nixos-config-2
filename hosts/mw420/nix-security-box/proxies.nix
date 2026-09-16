@@ -5,7 +5,6 @@
 {
   environment.systemPackages = with pkgs; [
     bettercap
-    burpsuite
     ettercap
     mitmproxy
     mubeng
