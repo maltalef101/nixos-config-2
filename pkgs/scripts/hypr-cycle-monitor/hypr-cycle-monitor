@@ -1,7 +1,12 @@
 # Cicla el foco (o mueve la ventana activa, con --move) entre monitores en
-# orden espacial de columnas (x, después y), en vez del orden de creación
-# que usa focusmonitor +1/-1. Así el anillo sigue la disposición física:
-# p. ej. HDMI (0,-1080) -> eDP (0,0) -> DP-2 (1920,0).
+# orden espacial de lectura (y, después x: fila por fila, de izquierda a
+# derecha), en vez del orden de creación que usa focusmonitor +1/-1.
+#
+# Así `prev` (h) va hacia la izquierda y, al agotar la fila, salta al final
+# de la fila de arriba; `next` (l) es el inverso exacto. Con solo dos teclas
+# el recorrido es un anillo, no navegación 2D: j/k ya las usan las ventanas.
+#
+# p. ej. eDP (0,0) -> HDMI (1920,0) -> DP-2 (0,1080).
 
 move=0
 if [ "${1:-}" = "--move" ]; then
@@ -13,8 +18,8 @@ dir=${1:?uso: hypr-cycle-monitor [--move] next|prev}
 
 # un solo snapshot para nombres y foco, para que no se corran entre sí
 json=$(hyprctl monitors -j)
-mapfile -t mons < <(jq -r 'sort_by(.x, .y) | .[].name' <<<"$json")
-focused=$(jq -r 'sort_by(.x, .y) | map(.focused) | index(true)' <<<"$json")
+mapfile -t mons < <(jq -r 'sort_by(.y, .x) | .[].name' <<<"$json")
+focused=$(jq -r 'sort_by(.y, .x) | map(.focused) | index(true)' <<<"$json")
 
 n=${#mons[@]}
 if [ "$focused" = "null" ] || [ "$n" -lt 2 ]; then
