@@ -1,6 +1,18 @@
 { inputs, outputs }: {
 	additions = final: _prev: import ../pkgs { pkgs = final; };
 
+	modifications = _final: prev: {
+		# split-grabroguewindows saca las ventanas de los special workspaces
+		# (scratchpads) al juntar rogues: el filtro tiene el De Morgan al
+		# revés (&& en vez de ||). El port C++ quedó deprecado upstream a
+		# favor de la reescritura en lua (que ya lo trae bien), así que no
+		# hay fix para v0.56 y va parche local. Ver el .patch.
+		split-monitor-workspaces =
+			inputs.split-monitor-workspaces.packages.${prev.stdenv.hostPlatform.system}.split-monitor-workspaces.overrideAttrs (old: {
+				patches = (old.patches or [ ]) ++ [ ./split-grabroguewindows-skip-specials.patch ];
+			});
+	};
+
 #	modifications = final: prev: {
 #		hyprland-patched = let
 #			libinput = prev.libinput.overrideAttrs (self: {

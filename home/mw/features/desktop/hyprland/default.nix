@@ -1,4 +1,4 @@
-{ pkgs, inputs, config, ... }: {
+{ pkgs, config, ... }: {
 	imports = [
 		../common
 		./waybar
@@ -52,8 +52,9 @@
 		# tags 1-10 (internamente 1-10, 11-20, ...). Vía keyword plugin= y no
 		# plugins=[] de hm (exec-once): hyprland carga el .so post-parse y
 		# re-parsea solo, así los binds split-* no dan "invalid dispatcher"
-		# al arrancar.
-		extraConfig = "plugin = ${inputs.split-monitor-workspaces.packages.${pkgs.system}.split-monitor-workspaces}/lib/libsplit-monitor-workspaces.so";
+		# al arrancar. El paquete sale del overlay, que parchea
+		# split-grabroguewindows para que no toque los special workspaces.
+		extraConfig = "plugin = ${pkgs.split-monitor-workspaces}/lib/libsplit-monitor-workspaces.so";
 
     configType = "hyprlang";
 

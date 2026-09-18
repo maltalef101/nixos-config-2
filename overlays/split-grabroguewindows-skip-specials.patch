@@ -1,0 +1,19 @@
+El filtro de split-grabroguewindows tiene el De Morgan al revés: el
+comentario dice "ignore unmapped and special windows" pero con && una
+ventana mapeada en un special workspace pasa el filtro, su workspace
+("special:...") nunca figura en el mapa del monitor (tags "1"-"10"...)
+y la saca como rogue al workspace actual. hyprsplit, de donde salió la
+lógica, usa ||; la reescritura en lua del plugin también lo trae bien,
+pero el port C++ quedó deprecado sin fix para v0.56.
+
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -186,7 +186,7 @@
+
+     for (const auto& window : Desktop::windowState()->windows()) {
+         // ignore unmapped and special windows
+-        if (!window->m_isMapped && !window->onSpecialWorkspace())
++        if (!window->m_isMapped || window->onSpecialWorkspace())
+             continue;
+
+         auto const workspaceName = window->m_workspace->m_name;
