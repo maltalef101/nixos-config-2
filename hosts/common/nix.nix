@@ -1,10 +1,11 @@
-{ inputs, lib, ...}:
+{ inputs, lib, options, ...}:
 {
   nix = {
     settings = {
       allowed-users = [ "root" "@wheel" ];
-      # necesario para que deploy.sh pueda copiar closures buildeados en otra máquina de la flota
-      trusted-users = [ "root" "@wheel" ];
+      # sin @wheel: un usuario de confianza del daemon es root en los hechos. deploy.sh no se usa hoy;
+      # si vuelve, firmar los closures (secret-key-files + trusted-public-keys) o construir en el destino
+      trusted-users = [ "root" ];
       auto-optimise-store = true;
       experimental-features = [ "nix-command" "flakes" ];
 
@@ -15,10 +16,13 @@
     gc = {
       automatic = true;
       dates = "weekly";
-      options = "--delete-older-than 2d";
+      # 14 días: un problema que aparece al tercer día todavía tiene a dónde volver
+      options = "--delete-older-than 14d";
     };
 
-    registry = lib.mapAttrs (_: value: { flake = value; }) inputs;
+    # El input infra (privado), sólo en las máquinas que importan sus módulos: así las demás evalúan sin acceso a él
+    registry = lib.mapAttrs (_: value: { flake = value; })
+      (if options ? chaska then inputs else removeAttrs inputs [ "infra" ]);
 
     nixPath = [ "nixpkgs=${inputs.nixpkgs.outPath}" ];
   };

@@ -1,0 +1,20 @@
+split-grabroguewindows mueve también las ventanas tragadas (swallow):
+moveWindowToWorkspace les crea un target en el layout aunque sigan
+ocultas, y queda un tile invisible al lado del swallower. No hace falta
+moverlas: CWindow::moveToWorkspace arrastra al swallowee cuando se mueve
+el swallower. Va encima de split-grabroguewindows-skip-specials.patch.
+
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -185,8 +185,9 @@
+     }
+ 
+     for (const auto& window : Desktop::windowState()->windows()) {
+-        // ignore unmapped and special windows
+-        if (!window->m_isMapped || window->onSpecialWorkspace())
++        // ignore unmapped, special and swallowed windows (the latter move
++        // along with their swallower)
++        if (!window->m_isMapped || window->onSpecialWorkspace() || window->m_currentlySwallowed)
+             continue;
+ 
+         auto const workspaceName = window->m_workspace->m_name;

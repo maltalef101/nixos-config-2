@@ -58,7 +58,7 @@
     slowlorust
     snallygaster
     subjs
-    swaggerhole
+    # swaggerhole # roto en nixpkgs actual: arrastra whispers → semgrep-core (patchelf aborta)
     uddup
     urlfinder
     wad

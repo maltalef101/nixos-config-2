@@ -8,7 +8,7 @@
     amass
     bind
     dnsenum
-    dnsmon-go
+    # dnsmon-go # sacado de nixpkgs: upstream archivó el proyecto (ago 2025)
     dnsmonster
     dnsrecon
     dnstake

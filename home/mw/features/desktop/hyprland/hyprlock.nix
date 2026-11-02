@@ -42,7 +42,6 @@
 				fail_color = "rgb(204, 34, 34)";
 				fail_text = "<i>$FAIL <b>($ATTEMPTS)</b></i>";
 				#fail_timeout = 2000;
-				fail_transition = 300;
 				capslock_color = -1;
 				numlock_color = -1;
 				bothlock_color = -1;

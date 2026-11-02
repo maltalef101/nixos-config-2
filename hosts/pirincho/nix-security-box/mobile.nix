@@ -11,7 +11,7 @@
     apktool
     dex2jar
     # genymotion # fetch roto: el instalador upstream devuelve 403 (URL retirada)
-    ghost
+    # ghost # roto en nixpkgs actual: pex-entysec no pasa el pythonMetadataCheck
     morf
     otadump
     payload-dumper-go

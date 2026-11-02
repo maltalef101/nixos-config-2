@@ -1,0 +1,127 @@
+/* Con el tema: la variante B de docs/propuestas/waybar, islas por
+ * función. La barra es transparente; cada isla es una cápsula en el fondo
+ * hondo de la marca al 94 %, más oscura que el cielo-noche (y que la
+ * superficie al 88 % de la propuesta), con un borde fino en el color de
+ * campo que la despega del fondo. Contra esa isla, el texto da ~13:1, el
+ * texto tenue ~9.6:1 y el acento ~4:1. Al pasar el puntero, el borde se
+ * enciende con el foco de la marca. Los colores y la fuente los define
+ * default.nix antes de esta hoja; la isla de los workspaces la dibuja
+ * espacios.css, después. */
+
+* {
+	font-size: 13px;
+	min-height: 0;
+}
+
+window#waybar {
+	background-color: transparent;
+	color: @foreground-color;
+}
+
+/* las islas */
+#espacios,
+#ventana,
+#clock,
+#estado,
+#recursos,
+#bandeja {
+	background-color: alpha(@fondo-hondo, 0.94);
+	border: 1px solid alpha(@campo, 0.9);
+	border-radius: 12px;
+	margin: 6px 4px 2px 4px;
+	padding: 0 8px;
+}
+
+#espacios:hover,
+#ventana:hover,
+#clock:hover,
+#estado:hover,
+#recursos:hover,
+#bandeja:hover {
+	border-color: @foco;
+}
+
+#espacios {
+	padding: 0 4px;
+}
+
+/* sin ventana no hay isla vacía */
+window#waybar.empty #ventana {
+	background-color: transparent;
+	border-color: transparent;
+}
+
+.modules-left {
+	margin-left: 6px;
+}
+
+.modules-right {
+	margin-right: 6px;
+}
+
+#clock {
+	padding: 0 16px;
+	font-weight: 600;
+	color: @foreground-color-alt;
+}
+
+#window {
+	color: @texto-tenue;
+	padding: 0 4px;
+}
+
+#custom-vpn,
+#wireplumber,
+#battery,
+#disk,
+#memory,
+#cpu,
+#temperature,
+#tray,
+#custom-notifications {
+	padding: 0 6px;
+}
+
+/* las cifras, todas del mismo ancho (las islas no tienen ancho fijo: cambian
+ * sólo cuando un valor gana o pierde una cifra) */
+#estado,
+#recursos {
+	font-feature-settings: "tnum";
+}
+
+/* la de infra no puede subir: el porqué, en el tooltip */
+#custom-vpn.aviso {
+	color: @warning;
+}
+
+#wireplumber.muted {
+	color: @texto-tenue;
+}
+
+#cpu.critical,
+#memory.critical,
+#disk.critical,
+#temperature.critical,
+#battery.critical {
+	color: @alert;
+}
+
+#disk.warning,
+#battery.warning {
+	color: @warning;
+}
+
+/* cargando o enchufada, la batería baja no es una alarma */
+#battery.charging,
+#battery.plugged {
+	color: @foreground-color;
+}
+
+/* lo común de los botones de workspace: sin lo que les pone el tema GTK */
+#workspaces button {
+	border: none;
+	box-shadow: none;
+	text-shadow: none;
+	background-image: none;
+	background-color: transparent;
+}

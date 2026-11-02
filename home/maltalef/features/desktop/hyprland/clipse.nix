@@ -1,4 +1,7 @@
-{ pkgs, config, ... }: {
+{ pkgs, config, ... }:
+let
+	tema = config.tema;
+in {
 	# clipboard manager: listener que ve cada selección nueva vía wl-paste
 	# --watch (protocolo wlr-data-control) y persiste el historial en
 	# ~/.config/clipse/clipboard_history.json (texto plano, ojo). El TUI se
@@ -31,34 +34,50 @@
 			};
 		};
 
-		# gruvbox desde la paleta salvo dos hardcodes: el acento es el mismo
-		# verde 689d6a del borde activo de hyprland y el dimmed es el gris
-		# 928374 (comment de gruvbox); ninguno de los dos es color base16
-		# (base03 de fondo dimmed era ilegible)
-		theme = with config.colorScheme.palette; {
+		# desde la paleta (colorScheme) salvo los colores de `c`, que no son
+		# base16. Con el tema: el título en el acento de la paleta, el resto
+		# del acento en el foco (un acento oscuro no se lee como texto sobre
+		# el fondo; en gruvbox-verde, 8ec07c) y el dimmed en el apagado de la
+		# paleta (en gruvbox-verde el gris 928374, porque su base03 es
+		# ilegible). Si no, gruvbox: el
+		# acento es el mismo verde 689d6a del borde activo de hyprland y el
+		# dimmed es el gris 928374
+		theme = with config.colorScheme.palette; let
+			c = if tema.enable then {
+				tituloTexto = tema.colores.sobreAcento;
+				tituloFondo = tema.colores.acento;
+				acento = tema.colores.foco;
+				apagado = tema.colores.apagado;
+			} else {
+				tituloTexto = base00;
+				tituloFondo = "689d6a";
+				acento = "689d6a";
+				apagado = "928374";
+			};
+		in {
 			useCustom = true;
 
-			TitleFore = "#${base00}";
-			TitleBack = "#689d6a";
+			TitleFore = "#${c.tituloTexto}";
+			TitleBack = "#${c.tituloFondo}";
 			TitleInfo = "#${base04}";
 
 			NormalTitle = "#${base07}";
 			NormalDesc = "#${base03}";
-			DimmedTitle = "#928374";
+			DimmedTitle = "#${c.apagado}";
 			DimmedDesc = "#${base02}";
 
 			# cursor: verde con barra clara a la izquierda; marcados con `s`:
 			# amarillo (los campos Marked* existen por el parche)
-			SelectedTitle = "#689d6a";
-			SelectedDesc = "#689d6a";
+			SelectedTitle = "#${c.acento}";
+			SelectedDesc = "#${c.acento}";
 			SelectedDescBorder = "#${base07}";
-			SelectedBorder = "#689d6a"; # muerto en 1.2.1, por si upstream lo usa
+			SelectedBorder = "#${c.acento}"; # muerto en 1.2.1, por si upstream lo usa
 			MarkedTitle = "#${base0A}";
 			MarkedDesc = "#${base0A}";
 
 			FilteredMatch = "#${base0A}";
 			FilterPrompt = "#${base0C}";
-			FilterInfo = "#689d6a";
+			FilterInfo = "#${c.acento}";
 			FilterText = "#${base07}";
 			FilterCursor = "#${base09}";
 
@@ -66,11 +85,11 @@
 			PinIndicatorColor = "#${base0A}";
 			HelpKey = "#${base04}";
 			HelpDesc = "#${base03}";
-			PageActiveDot = "#689d6a";
+			PageActiveDot = "#${c.acento}";
 			PageInactiveDot = "#${base02}";
 			DividerDot = "#${base03}";
 			PreviewedText = "#${base07}";
-			PreviewBorder = "#689d6a";
+			PreviewBorder = "#${c.acento}";
 		};
 	};
 }

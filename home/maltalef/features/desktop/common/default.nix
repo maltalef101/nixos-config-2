@@ -31,5 +31,7 @@
 	# personal helper scripts
 	hyprshot-full
 	hyprshot-region
+	# vista previa de markdown (WebKit, estilo GitHub oscuro) con recarga al guardar
+	mdview
   ];
 }

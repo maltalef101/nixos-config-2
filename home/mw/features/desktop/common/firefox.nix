@@ -33,7 +33,6 @@ in {
 		"browser.tabs.unloadOnLowMemory" = true;
 		"browser.low_commit_space_threshold_percent" = 100;
 		"browser.tabs.min_inactive_duration_before_unload" = 3600000;
-		"layout.css.devPixelsPerPx" = 0.95;
       };
 
 	  userChrome = ''

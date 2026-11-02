@@ -1,0 +1,51 @@
+# Escala del panel del laptop según haya o no monitores externos: con uno
+# enchufado, el eDP pasa a 1.25 para que se vea del mismo tamaño que el
+# externo (157 vs 90 PPI, compensado por la distancia); solo, vuelve a 1.
+# La config de Hyprland no tiene reglas condicionales, así que se resuelve
+# escuchando socket2. Las posiciones de los externos van en coordenadas
+# lógicas: a la derecha del laptop escalado arrancan en x=1536, no en 1920.
+
+panel="eDP-1"
+modo="1920x1080, 0x0"
+escalaConExterno="1.25"
+escalaSolo="1"
+
+aplicar() {
+	local monitores externos escalaActual escala
+	monitores=$(hyprctl monitors -j)
+	externos=$(jq --arg p "$panel" '[.[] | select(.name != $p)] | length' <<<"$monitores")
+	escalaActual=$(jq -r --arg p "$panel" '.[] | select(.name == $p) | .scale' <<<"$monitores")
+	# panel apagado (clamshell): nada que escalar
+	[ -n "$escalaActual" ] || return 0
+
+	if [ "$externos" -gt 0 ]; then
+		escala=$escalaConExterno
+	else
+		escala=$escalaSolo
+	fi
+
+	# comparar numéricamente: hyprctl devuelve 1.25 / 1.0
+	if awk -v a="$escalaActual" -v b="$escala" 'BEGIN { exit !(a == b) }'; then
+		return 0
+	fi
+	hyprctl keyword monitor "$panel, $modo, $escala" >/dev/null
+}
+
+if [ "${1:-}" = "--once" ]; then
+	aplicar
+	exit 0
+fi
+
+aplicar
+
+socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+socat -U - UNIX-CONNECT:"$socket" | while IFS= read -r event; do
+	case $event in
+		# solo la variante v1 (la v2 llega igual y repetiría el trabajo).
+		# configreloaded: el reload vuelve a aplicar la regla estática (1)
+		monitoradded\>\>* | monitorremoved\>\>* | configreloaded*)
+			sleep 0.5
+			aplicar
+			;;
+	esac
+done

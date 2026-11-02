@@ -13,7 +13,7 @@
     goblob
     grimoire
     imdshift
-    pacu
+    # pacu # roto en nixpkgs actual: awscli 1.x pide botocore y s3transfer más viejos
     poutine
     prowler
     yatas

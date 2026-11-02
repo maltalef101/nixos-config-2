@@ -12,7 +12,10 @@
 		limine = {
 			enable = true;
 			secureBoot.enable = true;
-		}; 
+			# la ESP es de 1 GB y cada initrd distinto pesa ~89 MB: 6 entradas, y el install copia
+			# antes de borrar, así que en el peor caso hay 7 initrds y 2 kernels (~650 MB)
+			maxGenerations = 6;
+		};
 		efi = {
 			canTouchEfiVariables = true;
 			efiSysMountPoint = "/boot/efi";
@@ -40,9 +43,5 @@
   hardware.graphics = {
 	  enable = true;
 	  enable32Bit = true;
-  };
-
-  networking = {
-	  firewall.enable = false;
   };
 }

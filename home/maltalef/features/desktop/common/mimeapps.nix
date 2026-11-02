@@ -42,7 +42,9 @@
 
 		# nvim.desktop trae Terminal=true -> abre en foot vía xdg-terminal-exec
 		"text/plain" = [ "nvim.desktop" ];
-		"text/markdown" = [ "nvim.desktop" ];
+		# markdown se abre en el visor (mdview, pkgs/scripts); para editar,
+		# nvim a mano o la tecla de editor de superfile
+		"text/markdown" = [ "mdview.desktop" ];
 
 		"x-scheme-handler/mailto" = [ "thunderbird.desktop" ];
 

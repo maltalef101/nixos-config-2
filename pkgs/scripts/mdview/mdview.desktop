@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=mdview
+Comment=Vista previa de markdown con recarga al guardar
+Exec=mdview %f
+Icon=text-markdown
+Terminal=false
+Categories=Office;Viewer;
+MimeType=text/markdown;

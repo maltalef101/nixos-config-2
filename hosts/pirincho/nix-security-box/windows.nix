@@ -28,7 +28,7 @@
     nbtscan
     nbtscanner
     offensive-azure
-    powerview
+    # powerview # roto en nixpkgs actual: fastmcp-slim (dependencia) marcado broken
     pre2k
     python3Packages.lsassy
     python3Packages.pypykatz

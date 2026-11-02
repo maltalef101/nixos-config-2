@@ -1,0 +1,16 @@
+" Tridactyl del Firefox de prueba (nixos-config-2, pkgs/firefox-prueba). Lo lee en cada arranque de firefox, por
+" el native messenger (su autocmd TriStart corre con runtime.onStartup: en el primero, cuando se instala, todavía
+" no). firefox-prueba lo copia del store una vez y no lo vuelve a pisar si se cambia acá. Después de cambiarlo,
+" :source o reiniciar.
+
+" La página nueva en blanco, y no la de Tridactyl (novedades y ayuda)
+set newtab about:blank
+
+" Ctrl+F busca con la barra de firefox (Tridactyl la usa para bajar una página: para eso quedan Ctrl+D y espacio)
+unbind <C-f>
+
+" La línea de comandos y las pistas en oscuro
+colourscheme dark
+
+" Ctrl+I en un campo de texto lo abre en nvim, en una ventana de foot
+set editorcmd @editor@ %f

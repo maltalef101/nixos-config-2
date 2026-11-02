@@ -4,7 +4,9 @@
 
 {
   environment.systemPackages = with pkgs; [
-    acltoolkit
+    # el pname no coincide con el nombre del proyecto (acltoolkit-ad) y el
+    # pythonMetadataCheckPhase nuevo de nixpkgs falla el build
+    (acltoolkit.overrideAttrs { dontCheckPythonMetadata = true; })
     checkip
     ghunt
     ike-scan

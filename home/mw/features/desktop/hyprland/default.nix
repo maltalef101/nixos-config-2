@@ -108,6 +108,10 @@
 				disable_hyprland_logo = true;
 				disable_splash_rendering = true;
 
+				# si hyprlock se cae con la sesión bloqueada (p. ej. al enchufar o sacar el monitor), se puede
+				# relanzar desde una TTY: hyprctl --instance 0 dispatch exec hyprlock
+				allow_session_lock_restore = true;
+
 				## i'd like this to not be enabled, but when spawning empty special
 				## workspaces that have a rule to execute something in them, it doesn't get
 				## focused on spawn

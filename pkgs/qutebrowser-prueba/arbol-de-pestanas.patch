@@ -1,0 +1,2502 @@
+diff --git a/qutebrowser/browser/browsertab.py b/qutebrowser/browser/browsertab.py
+index 7f713dc0c..6a3c5ebc0 100644
+--- a/qutebrowser/browser/browsertab.py
++++ b/qutebrowser/browser/browsertab.py
+@@ -40,6 +40,8 @@ if TYPE_CHECKING:
+     from qutebrowser.browser.webengine.webview import WebEngineView
+     from qutebrowser.browser.webkit.webview import WebView
+ 
++from qutebrowser.mainwindow.treetabwidget import TreeTabWidget
++from qutebrowser.misc.notree import Node
+ 
+ tab_id_gen = itertools.count(0)
+ _WidgetType = Union["WebView", "WebEngineView"]
+@@ -1058,6 +1060,11 @@ class AbstractTab(QWidget):
+             self, parent=self)
+         self.backend: Optional[usertypes.Backend] = None
+ 
++        if parent is not None and isinstance(parent, TreeTabWidget):
++            self.node: AbstractTab = Node(self, parent=parent.tree_root)
++        else:
++            self.node: AbstractTab = Node(self, parent=None)
++
+         # If true, this tab has been requested to be removed (or is removed).
+         self.pending_removal = False
+         self.shutting_down.connect(functools.partial(
+diff --git a/qutebrowser/browser/commands.py b/qutebrowser/browser/commands.py
+index 8d248daa0..287614903 100644
+--- a/qutebrowser/browser/commands.py
++++ b/qutebrowser/browser/commands.py
+@@ -9,6 +9,8 @@
+ import os.path
+ import shlex
+ import functools
++import inspect
++import urllib.parse
+ from typing import cast, Union, Optional
+ from collections.abc import Callable
+ 
+@@ -24,7 +26,7 @@ from qutebrowser.keyinput import modeman, keyutils
+ from qutebrowser.utils import (message, usertypes, log, qtutils, urlutils,
+                                objreg, utils, standarddir, debug)
+ from qutebrowser.utils.usertypes import KeyMode
+-from qutebrowser.misc import editor, guiprocess, objects
++from qutebrowser.misc import editor, guiprocess, objects, notree
+ from qutebrowser.completion.models import urlmodel, miscmodels
+ from qutebrowser.mainwindow import mainwindow, windowundo
+ 
+@@ -105,6 +107,7 @@ class CommandDispatcher:
+         background: bool = False,
+         window: bool = False,
+         related: bool = False,
++        sibling: bool = False,
+         private: Optional[bool] = None,
+     ) -> None:
+         """Helper function to open a page.
+@@ -116,6 +119,7 @@ class CommandDispatcher:
+             window: Whether to open in a new window
+             private: If opening a new window, open it in private browsing mode.
+                      If not given, inherit the current window's mode.
++            sibling: Open tab in a sibling node of the currently focused tab.
+         """
+         urlutils.raise_cmdexc_if_invalid(url)
+         tabbed_browser = self._tabbed_browser
+@@ -128,10 +132,12 @@ class CommandDispatcher:
+             tabbed_browser = self._new_tabbed_browser(private)
+             tabbed_browser.tabopen(url)
+             tabbed_browser.window().show()
+-        elif tab:
+-            tabbed_browser.tabopen(url, background=False, related=related)
+-        elif background:
+-            tabbed_browser.tabopen(url, background=True, related=related)
++        elif tab or background:
++            if sibling:
++                self._ensure_tree_tabs("--sibling")
++
++            tabbed_browser.tabopen(url, background=background,
++                                   related=related, sibling=sibling)
+         else:
+             widget = self._current_widget()
+             widget.load_url(url)
+@@ -213,7 +219,8 @@ class CommandDispatcher:
+                                  "{!r}!".format(conf_selection))
+         return None
+ 
+-    def _tab_close(self, tab, prev=False, next_=False, opposite=False):
++    def _tab_close(self, tab, prev=False, next_=False,
++                   opposite=False, new_undo=True, recursive=False):
+         """Helper function for tab_close be able to handle message.async.
+ 
+         Args:
+@@ -229,17 +236,17 @@ class CommandDispatcher:
+                                                           opposite)
+ 
+         if selection_override is None:
+-            self._tabbed_browser.close_tab(tab)
++            self._tabbed_browser.close_tab(tab, new_undo=new_undo, recursive=recursive)
+         else:
+             old_selection_behavior = tabbar.selectionBehaviorOnRemove()
+             tabbar.setSelectionBehaviorOnRemove(selection_override)
+-            self._tabbed_browser.close_tab(tab)
++            self._tabbed_browser.close_tab(tab, new_undo=new_undo, recursive=recursive)
+             tabbar.setSelectionBehaviorOnRemove(old_selection_behavior)
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window')
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+     def tab_close(self, prev=False, next_=False, opposite=False,
+-                  force=False, count=None):
++                  force=False, count=None, recursive=False):
+         """Close the current/[count]th tab.
+ 
+         Args:
+@@ -248,15 +255,17 @@ class CommandDispatcher:
+             opposite: Force selecting the tab in the opposite direction of
+                       what's configured in 'tabs.select_on_remove'.
+             force: Avoid confirmation for pinned tabs.
++            recursive: Close all descendants (tree-tabs) as well as current tab
+             count: The tab index to close, or None
+         """
+         tab = self._cntwidget(count)
++        tabbed_browser = self._tabbed_browser
+         if tab is None:
+             return
+-        close = functools.partial(self._tab_close, tab, prev,
+-                                  next_, opposite)
+ 
+-        self._tabbed_browser.tab_close_prompt_if_pinned(tab, force, close)
++        close = functools.partial(self._tab_close, tab, prev,
++                                  next_, opposite, True, recursive)
++        tabbed_browser.tab_close_prompt_if_pinned(tab, force, close)
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window',
+                        name='tab-pin')
+@@ -281,8 +290,9 @@ class CommandDispatcher:
+     @cmdutils.register(instance='command-dispatcher', name='open',
+                        maxsplit=0, scope='window')
+     @cmdutils.argument('url', completion=urlmodel.url)
++    @cmdutils.argument('sibling', flag='S')
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+-    def openurl(self, url=None, related=False,
++    def openurl(self, url=None, related=False, sibling=False,
+                 bg=False, tab=False, window=False, count=None, secure=False,
+                 private=False):
+         """Open a URL in the current/[count]th tab.
+@@ -296,6 +306,8 @@ class CommandDispatcher:
+             window: Open in a new window.
+             related: If opening a new tab, position the tab as related to the
+                      current one (like clicking on a link).
++            sibling: If opening a new tab, position the as a sibling of the
++                     current one.
+             count: The tab index to open the URL in, or None.
+             secure: Force HTTPS.
+             private: Open a new window in private browsing mode.
+@@ -314,8 +326,8 @@ class CommandDispatcher:
+                 bg = True
+ 
+             if tab or bg or window or private:
+-                self._open(cur_url, tab, bg, window, related=related,
+-                           private=private)
++                self._open(cur_url, tab, bg, window, private=private,
++                           related=related, sibling=sibling)
+             else:
+                 curtab = self._cntwidget(count)
+                 if curtab is None:
+@@ -454,11 +466,42 @@ class CommandDispatcher:
+         if not keep:
+             tabbed_browser.close_tab(tab, add_undo=False, transfer=True)
+ 
++    def _tree_tab_give(self, tabbed_browser, keep):
++        """Recursive tab-give, move current tab and children to tabbed_browser."""
++        new_tab_map = {}  # old_uid -> new tab
++        current_node = self._current_widget().node
++        for node in current_node.traverse(
++            notree.TraverseOrder.PRE,
++            render_collapsed=True
++        ):
++            tab = tabbed_browser.tabopen(
++                node.value.url(),
++                related=False,
++                background=True,
++            )
++            new_tab_map[node.uid] = tab
++
++            if node.collapsed:
++                tab.node.collapsed = True
++            if node != current_node:  # top level node has no parent
++                parent = new_tab_map[node.parent.uid].node
++                parent.children += (tab.node,)
++
++        tabbed_browser.widget.setCurrentWidget(new_tab_map[current_node.uid])
++        if not keep:
++            self._tabbed_browser.close_tab(
++                current_node.value,
++                add_undo=False,
++                transfer=True,
++                recursive=True,
++            )
++
+     @cmdutils.register(instance='command-dispatcher', scope='window')
+     @cmdutils.argument('win_id', completion=miscmodels.window)
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+-    def tab_give(self, win_id: int = None, keep: bool = False,
+-                 count: int = None, private: bool = False) -> None:
++    def tab_give(self, win_id: Optional[int] = None, keep: bool = False,
++                 count: Optional[int] = None, private: bool = False,
++                 recursive: bool = False) -> None:
+         """Give the current tab to a new or existing window if win_id given.
+ 
+         If no win_id is given, the tab will get detached into a new window.
+@@ -467,6 +510,7 @@ class CommandDispatcher:
+             win_id: The window ID of the window to give the current tab to.
+             keep: If given, keep the old tab around.
+             count: Overrides win_id (index starts at 1 for win_id=0).
++            recursive: Whether to move the entire subtree starting at the tab.
+             private: If the tab should be detached into a private instance.
+         """
+         if config.val.tabs.tabs_are_windows:
+@@ -498,14 +542,18 @@ class CommandDispatcher:
+                 raise cmdutils.CommandError(
+                     "The window with id {} is not private".format(win_id))
+ 
+-        tabbed_browser.tabopen(self._current_url())
++        if recursive and tabbed_browser.is_treetabbedbrowser:
++            self._tree_tab_give(tabbed_browser, keep)
++        else:
++            tabbed_browser.tabopen(self._current_url())
++            if not keep:
++                self._tabbed_browser.close_tab(self._current_widget(),
++                                               add_undo=False,
++                                               transfer=True)
++        # Make sure the tabbed browser is shown in case we created a new one
++        # when detaching.
+         tabbed_browser.window().show()
+ 
+-        if not keep:
+-            self._tabbed_browser.close_tab(self._current_widget(),
+-                                           add_undo=False,
+-                                           transfer=True)
+-
+     def _back_forward(
+         self, *,
+         tab: bool,
+@@ -862,35 +910,71 @@ class CommandDispatcher:
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window')
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+-    def tab_prev(self, count=1):
++    def tab_prev(self, count=1, sibling=False):
+         """Switch to the previous tab, or switch [count] tabs back.
+ 
+         Args:
+             count: How many tabs to switch back.
++            sibling: Whether to focus the previous tree sibling.
+         """
+-        newidx = self._current_index() - count
+-        if newidx >= 0:
+-            self._set_current_index(newidx)
+-        elif config.val.tabs.wrap:
+-            self._set_current_index(newidx % self._count())
++        if sibling and self._tabbed_browser.is_treetabbedbrowser:
++            cur_node = self._current_widget().node
++            siblings = list(cur_node.parent.children)
++
++            if siblings and len(siblings) > 1:
++                node_idx = siblings.index(cur_node)
++                new_idx = node_idx - count
++                if new_idx >= 0 or config.val.tabs.wrap:
++                    target_node = siblings[(node_idx-count) % len(siblings)]
++                    idx = self._tabbed_browser.widget.indexOf(
++                        target_node.value)
++                    self._set_current_index(idx)
++                else:
++                    log.webview.debug("First sibling")
++            else:
++                log.webview.debug("No siblings")
+         else:
+-            log.webview.debug("First tab")
++            newidx = self._current_index() - count
++            if newidx >= 0:
++                self._set_current_index(newidx)
++            elif config.val.tabs.wrap:
++                self._set_current_index(newidx % self._count())
++            else:
++                log.webview.debug("First tab")
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window')
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+-    def tab_next(self, count=1):
++    def tab_next(self, count=1, sibling=False):
+         """Switch to the next tab, or switch [count] tabs forward.
+ 
+         Args:
+             count: How many tabs to switch forward.
++            sibling: Whether to focus the next tree sibling.
+         """
+-        newidx = self._current_index() + count
+-        if newidx < self._count():
+-            self._set_current_index(newidx)
+-        elif config.val.tabs.wrap:
+-            self._set_current_index(newidx % self._count())
++        if sibling and self._tabbed_browser.is_treetabbedbrowser:
++            cur_node = self._current_widget().node
++            siblings = list(cur_node.parent.children)
++
++            if siblings and len(siblings) > 1:
++                node_idx = siblings.index(cur_node)
++                new_idx = node_idx + count
++                if new_idx < len(siblings) or config.val.tabs.wrap:
++                    target_node = siblings[new_idx % len(siblings)]
++                    idx = self._tabbed_browser.widget.indexOf(
++                        target_node.value)
++                    self._set_current_index(idx)
++                else:
++                    log.webview.debug("Last sibling")
++            else:
++                log.webview.debug("No siblings")
+         else:
+-            log.webview.debug("Last tab")
++            newidx = self._current_index() + count
++            if newidx < self._count():
++                self._set_current_index(newidx)
++            elif config.val.tabs.wrap:
++                self._set_current_index(newidx % self._count())
++            else:
++                log.webview.debug("Last tab")
+ 
+     def _resolve_tab_index(self, index):
+         """Resolve a tab index to the tabbedbrowser and tab.
+@@ -972,7 +1056,8 @@ class CommandDispatcher:
+         tabbed_browser.widget.setCurrentWidget(tab)
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window')
+-    @cmdutils.argument('index', choices=['last', 'stack-next', 'stack-prev'],
++    @cmdutils.argument('index', choices=['last', 'parent',
++                                         'stack-next', 'stack-prev'],
+                        completion=miscmodels.tab_focus)
+     @cmdutils.argument('count', value=cmdutils.Value.count)
+     def tab_focus(self, index: Union[str, int] = None,
+@@ -983,11 +1068,15 @@ class CommandDispatcher:
+         If both are given, use count.
+ 
+         Args:
+-            index: The tab index to focus, starting with 1. The special value
+-                   `last` focuses the last focused tab (regardless of count),
+-                   and `stack-prev`/`stack-next` traverse a stack of visited
+-                   tabs. Negative indices count from the end, such that -1 is
+-                   the last tab.
++            index: The tab index to focus, starting with 1. Negative indices
++                   count from the end, such that -1 is the last tab. Special
++                   values are:
++                       - `last` focuses the last focused tab (regardless of
++                         count).
++                       - `parent` focuses the parent tab in the tree hierarchy,
++                         if `tabs.tree_tabs` is enabled.
++                       - `stack-prev`/`stack-next` traverse a stack of visited
++                         tabs.
+             count: The tab index to focus, starting with 1.
+             no_last: Whether to avoid focusing last tab if already focused.
+         """
+@@ -997,6 +1086,23 @@ class CommandDispatcher:
+             assert isinstance(index, str)
+             self._tab_focus_stack(index)
+             return
++        elif index == 'parent':
++            self._ensure_tree_tabs("parent")
++            node = self._current_widget().node
++            path = node.path
++            if count:
++                if count < len(path):
++                    path_idx = 0 - count - 1  # path[-1] is node, so shift by 1
++                else:
++                    path_idx = 1  # first non-root node
++            else:
++                path_idx = -2  # immediate parent (path[-1] is node)
++
++            target_node = path[path_idx]
++            if node is target_node or target_node.value is None:
++                raise cmdutils.CommandError("Tab has no parent! ")
++            target_tab = target_node.value
++            index = self._tabbed_browser.widget.indexOf(target_tab) + 1
+         elif index is None:
+             message.warning(
+                 "Using :tab-focus without count is deprecated, "
+@@ -1022,7 +1128,11 @@ class CommandDispatcher:
+     @cmdutils.register(instance="command-dispatcher", scope="window")
+     @cmdutils.argument("index", choices=["+", "-", "start", "end"])
+     @cmdutils.argument("count", value=cmdutils.Value.count)
+-    def tab_move(self, index: Union[str, int] = None, count: int = None) -> None:
++    def tab_move(  # noqa: C901
++        self,
++        index: Union[str, int, None] = None,
++        count: Optional[int] = None,
++    ) -> None:
+         """Move the current tab according to the argument and [count].
+ 
+         If neither is given, move it to the first position.
+@@ -1040,13 +1150,25 @@ class CommandDispatcher:
+             # relative moving
+             new_idx = self._current_index()
+             delta = 1 if count is None else count
+-            if index == "-":
+-                new_idx -= delta
+-            elif index == "+":  # pragma: no branch
+-                new_idx += delta
+ 
+-            if config.val.tabs.wrap:
+-                new_idx %= self._count()
++            if self._tabbed_browser.is_treetabbedbrowser:
++                node = self._current_widget().node
++                parent = node.parent
++                siblings = list(parent.children)
++
++                if len(siblings) <= 1:
++                    return
++                rel_idx = siblings.index(node)
++                rel_idx += delta if index == '+' else - delta
++                rel_idx %= len(siblings)
++                new_idx = self._tabbed_browser.widget.indexOf(
++                    siblings[rel_idx].value)
++
++            else:
++                new_idx += delta if index == '+' else - delta
++
++                if config.val.tabs.wrap:
++                    new_idx %= self._count()
+         else:
+             # pylint: disable=else-if-used
+             # absolute moving
+@@ -1069,7 +1191,32 @@ class CommandDispatcher:
+         cur_idx = self._current_index()
+         cmdutils.check_overflow(cur_idx, 'int')
+         cmdutils.check_overflow(new_idx, 'int')
+-        self._tabbed_browser.widget.tabBar().moveTab(cur_idx, new_idx)
++
++        if self._tabbed_browser.is_treetabbedbrowser:
++            tab = self._current_widget()
++            tree_root = self._tabbed_browser.widget.tree_root
++            # Lookup target nodes from display order list to match what the
++            # user sees in the tab bar.
++            nodes = list(tree_root.traverse(render_collapsed=False))[1:]
++            target_node = nodes[new_idx]
++            if tab.node in target_node.path:
++                raise cmdutils.CommandError("Can't move tab to a descendent"
++                                            " of itself")
++
++            tab.node.parent = None  # detach the node now to avoid duplicate errors
++            target_siblings = list(target_node.parent.children)
++            new_idx_relative = target_siblings.index(target_node)
++            if cur_idx < new_idx:
++                # If moving the tab to a higher number, insert if after the
++                # target node to account for all the tabs shifting down.
++                new_idx_relative += 1
++
++            target_siblings.insert(new_idx_relative, tab.node)
++            target_node.parent.children = target_siblings
++
++            self._tabbed_browser.widget.tree_tab_update()
++        else:
++            self._tabbed_browser.widget.tabBar().moveTab(cur_idx, new_idx)
+ 
+     @cmdutils.register(instance='command-dispatcher', scope='window',
+                        maxsplit=0, no_replace_variables=True)
+@@ -1900,3 +2047,149 @@ class CommandDispatcher:
+ 
+         log.misc.debug('state before fullscreen: {}'.format(
+             debug.qflags_key(Qt, window.state_before_fullscreen)))
++
++    def _ensure_tree_tabs(self, arg_name: Optional[str] = None):
++        """Check if we are on a tree tabs enabled browser."""
++        if not self._tabbed_browser.is_treetabbedbrowser:
++            # Potentially fragile code to get the name of the command the user
++            # called. Get the calling functions via inspect, lookup the
++            # command object by looking for a command with the related unbound
++            # functions as its handler.
++            # Alternate options:
++            # 1. stash the cmd object on the function
++            # 2. duplicate the slugification of the function name (it's just _->-)
++            # 3. move this check into the Command object somehow (easy for
++            #    disallowed commands, hard for disallowed args)
++            # 4. save the currently executing command somewhere
++            bound_func = getattr(self, inspect.stack()[1].function)
++            cmds = [
++                name
++                for name, cmd
++                in objects.commands.items()
++                if cmd.handler == bound_func.__func__
++            ]
++            assert len(cmds) == 1
++            cmd_name = cmds[0]
++
++            arg_part = ""
++            if arg_name:
++                arg_part = f"argument `{arg_name}` "
++            msg = f"{cmd_name}: {arg_part}requires a window with tree tabs"
++            raise cmdutils.CommandError(msg)
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('count', value=cmdutils.Value.count)
++    def tree_tab_promote(self, count=1):
++        """Promote a tab so it becomes next sibling of its parent.
++
++        Observes tabs.new_position.tree.promote in positioning the tab among
++        new siblings.
++
++        Args:
++            count: How many levels the tabs should be promoted to
++        """
++        self._ensure_tree_tabs()
++        config_position = config.val.tabs.new_position.tree.promote
++        try:
++            self._current_widget().node.promote(count, config_position)
++        except notree.TreeError:
++            raise cmdutils.CommandError('Tab has no parent!')
++        finally:
++            self._tabbed_browser.widget.tree_tab_update()
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    def tree_tab_demote(self):
++        """Demote a tab making it children of its previous adjacent sibling.
++
++        Observes tabs.new_position.tree.demote in positioning the tab among new
++        siblings.
++        """
++        self._ensure_tree_tabs()
++        cur_node = self._current_widget().node
++
++        config_position = config.val.tabs.new_position.tree.demote
++        try:
++            cur_node.demote(config_position)
++        except notree.TreeError:
++            raise cmdutils.CommandError('Tab has no previous sibling!')
++        finally:
++            self._tabbed_browser.widget.tree_tab_update()
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('count', value=cmdutils.Value.count)
++    def tree_tab_toggle_hide(self, count=None):
++        """If the current tab's children are shown hide them, and vice-versa.
++
++        This toggles the current tab's node's `collapsed` attribute.
++
++        Args:
++            count: Which tab to collapse
++        """
++        self._ensure_tree_tabs()
++        tab = self._cntwidget(count)
++        if not tab.node.children:
++            return
++        tab.node.collapsed = not tab.node.collapsed
++
++        self._tabbed_browser.widget.tree_tab_update()
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('count', value=cmdutils.Value.count)
++    def tree_tab_cycle_hide(self, count=1):
++        """Hides levels of descendents: children, grandchildren, and so on.
++
++        Args:
++            count: How many levels to hide.
++        """
++        self._ensure_tree_tabs()
++        while count > 0:
++            tab = self._current_widget()
++            self._tabbed_browser.cycle_hide_tab(tab.node)
++            count -= 1
++
++        self._tabbed_browser.widget.tree_tab_update()
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    def tree_tab_create_group(self, *name, related=False,
++                              background=False):
++        """Wrapper around :open qute://treegroup/name. Correctly escapes names.
++
++        Example: `:tree-tab-create-group Foo Bar` calls
++            `:open qute://treegroup/Foo%20Bar`
++
++        Args:
++            name: Name of the group to create
++            related: whether to open as a child of current tab or under root
++            background: whether to open in a background tab
++        """
++        title = ' '.join(name)
++        path = urllib.parse.quote(title)
++        if background:
++            self.openurl('qute://treegroup/' + path, related=related, bg=True)
++        else:
++            self.openurl('qute://treegroup/' + path, related=related, tab=True)
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('count', value=cmdutils.Value.count)
++    def tree_tab_suspend_children(self, count=None):
++        """Suspends all descendent of a tab to reduce memory usage.
++
++        Args:
++            count: Target tab.
++        """
++        self._ensure_tree_tabs()
++        tab = self._cntwidget(count)
++        for descendent in tab.node.traverse():
++            cur_tab = descendent.value
++            if cur_tab and cur_tab is not tab:
++                cur_url = cur_tab.url().url()
++                if not cur_url.startswith("qute://"):
++                    new_url = self._parse_url(
++                        "qute://back/#" + cur_tab.title())
++                    cur_tab.load_url(new_url)
+diff --git a/qutebrowser/browser/qutescheme.py b/qutebrowser/browser/qutescheme.py
+index 59edf9f33..c253040f8 100644
+--- a/qutebrowser/browser/qutescheme.py
++++ b/qutebrowser/browser/qutescheme.py
+@@ -579,6 +579,18 @@ def qute_warning(url: QUrl) -> _HandlerRet:
+     return 'text/html', src
+ 
+ 
++@add_handler('treegroup')
++def qute_treegroup(url):
++    """Handler for qute://treegroup/x.
++
++    Makes an empty tab with a title, for use with tree-tabs as a grouping
++    feature.
++    """
++    src = jinja.render('tree_group.html',
++                       title=url.path()[1:])
++    return 'text/html', src
++
++
+ @add_handler('resource')
+ def qute_resource(url: QUrl) -> _HandlerRet:
+     """Handler for qute://resource."""
+diff --git a/qutebrowser/commands/command.py b/qutebrowser/commands/command.py
+index 989a484f9..55d15d96a 100644
+--- a/qutebrowser/commands/command.py
++++ b/qutebrowser/commands/command.py
+@@ -52,6 +52,7 @@ class Command:
+                  both)
+         no_replace_variables: Don't replace variables like {url}
+         modes: The modes the command can be executed in.
++        tree_tab: Whether the command is a tree-tabs command
+         _qute_args: The saved data from @cmdutils.argument
+         _count: The count set for the command.
+         _instance: The object to bind 'self' to.
+@@ -66,7 +67,7 @@ class Command:
+         self, *, handler, name, instance=None, maxsplit=None,
+         modes=None, not_modes=None, debug=False, deprecated=False,
+         no_cmd_split=False, star_args_optional=False, scope='global',
+-        backend=None, no_replace_variables=False,
++        backend=None, no_replace_variables=False, tree_tab=False,
+     ):  # pylint: disable=too-many-arguments
+         if modes is not None and not_modes is not None:
+             raise ValueError("Only modes or not_modes can be given!")
+@@ -96,6 +97,7 @@ class Command:
+         self.handler = handler
+         self.no_cmd_split = no_cmd_split
+         self.backend = backend
++        self.tree_tab = tree_tab
+         self.no_replace_variables = no_replace_variables
+ 
+         self.docparser = docutils.DocstringParser(handler)
+diff --git a/qutebrowser/completion/models/__init__.py b/qutebrowser/completion/models/__init__.py
+index e72019b33..1a83129f7 100644
+--- a/qutebrowser/completion/models/__init__.py
++++ b/qutebrowser/completion/models/__init__.py
+@@ -4,11 +4,13 @@
+ 
+ """Models for the command completion."""
+ 
+-from typing import Optional
++from typing import Optional, TYPE_CHECKING
+ from collections.abc import Sequence
+-from qutebrowser.completion.models.util import DeleteFuncType
+ from qutebrowser.qt.core import QAbstractItemModel
+ 
++if TYPE_CHECKING:
++    from qutebrowser.completion.models.util import DeleteFuncType
++
+ 
+ class BaseCategory(QAbstractItemModel):
+     """Abstract base class for categories of CompletionModels.
+@@ -21,4 +23,4 @@ class BaseCategory(QAbstractItemModel):
+ 
+     name: str
+     columns_to_filter: Sequence[int]
+-    delete_func: Optional[DeleteFuncType] = None
++    delete_func: Optional["DeleteFuncType"] = None
+diff --git a/qutebrowser/completion/models/util.py b/qutebrowser/completion/models/util.py
+index fb48017e8..237eba6e8 100644
+--- a/qutebrowser/completion/models/util.py
++++ b/qutebrowser/completion/models/util.py
+@@ -8,6 +8,7 @@ from collections.abc import Sequence, Callable
+ 
+ from qutebrowser.utils import usertypes
+ from qutebrowser.misc import objects
++from qutebrowser.config import config
+ 
+ 
+ DeleteFuncType = Callable[[Sequence[str]], None]
+@@ -31,8 +32,9 @@ def get_cmd_completions(info, include_hidden, include_aliases, prefix=''):
+         hide_debug = obj.debug and not objects.args.debug
+         hide_mode = (usertypes.KeyMode.normal not in obj.modes and
+                      not include_hidden)
++        hide_tree = obj.tree_tab and not config.cache['tabs.tree_tabs']
+         hide_ni = obj.name == 'Ni!'
+-        if not (hide_debug or hide_mode or obj.deprecated or hide_ni):
++        if not (hide_tree or hide_debug or hide_mode or obj.deprecated or hide_ni):
+             bindings = ', '.join(cmd_to_keys.get(obj.name, []))
+             cmdlist.append((prefix + obj.name, obj.desc, bindings))
+ 
+diff --git a/qutebrowser/config/configdata.yml b/qutebrowser/config/configdata.yml
+index 882258573..415b5de13 100644
+--- a/qutebrowser/config/configdata.yml
++++ b/qutebrowser/config/configdata.yml
+@@ -2311,6 +2311,40 @@ tabs.new_position.stacking:
+     Only applies for `next` and `prev` values of `tabs.new_position.related`
+     and `tabs.new_position.unrelated`.
+ 
++tabs.new_position.tree.new_child:
++  default: first
++  type: NewChildPosition
++  desc: >-
++    Position of new children among siblings, e.g. after calling `:open
++    --relative ...` or following a link.
++
++tabs.new_position.tree.new_sibling:
++  default: first
++  type: NewTabPosition
++  desc: >-
++    Position of siblings, e.g. after calling `:open --sibling ...`.
++
++tabs.new_position.tree.new_toplevel:
++  default: last
++  type: NewTabPosition
++  desc: >-
++    Position of new top-level tabs related to the topmost ancestor of current
++    tab, e.g. when calling `:open ...` without `--relative` or `--sibling`.
++
++tabs.new_position.tree.promote:
++  default: next
++  type: NewTabPosition
++  desc: >-
++    Position at which a tab is placed among its new siblings after being
++    promoted with `:tree-tab-promote`
++
++tabs.new_position.tree.demote:
++  default: last
++  type: NewChildPosition
++  desc: >-
++    Position at which a tab is placed among its new siblings after being
++    demoted with `:tree-tab-demote`
++
+ tabs.padding:
+   default:
+     top: 0
+@@ -2376,7 +2410,7 @@ tabs.title.elide:
+   desc: Position of ellipsis in truncated title of tabs.
+ 
+ tabs.title.format:
+-  default: '{audio}{index}: {current_title}'
++  default: '{tree}{collapsed}{audio}{index}: {current_title}'
+   type:
+     name: FormatString
+     fields:
+@@ -2394,6 +2428,8 @@ tabs.title.format:
+       - current_url
+       - protocol
+       - audio
++      - collapsed
++      - tree
+     none_ok: true
+   desc: |
+     Format to use for the tab title.
+@@ -2415,6 +2451,8 @@ tabs.title.format:
+     * `{current_url}`: URL of the current web page.
+     * `{protocol}`: Protocol (http/https/...) of the current web page.
+     * `{audio}`: Indicator for audio/mute status.
++    * `{collapsed}`: If children tabs are hidden, the string `[...]`, empty otherwise
++    * `{tree}`: The ASCII tree prefix of current tab.
+ 
+ tabs.title.format_pinned:
+   default: '{index}'
+@@ -2435,6 +2473,8 @@ tabs.title.format_pinned:
+       - current_url
+       - protocol
+       - audio
++      - collapsed
++      - tree
+     none_ok: true
+   desc: Format to use for the tab title for pinned tabs. The same placeholders
+     like for `tabs.title.format` are defined.
+@@ -2533,6 +2573,12 @@ tabs.wrap:
+   type: Bool
+   desc: Wrap when changing tabs.
+ 
++tabs.tree_tabs:
++  default: false
++  type: Bool
++  desc: Enable tree-tabs mode.
++  restart: true
++
+ tabs.focus_stack_size:
+   default: 10
+   type:
+@@ -3876,6 +3922,17 @@ bindings.default:
+         all no-3rdparty never ;; reload
+       tCu: config-cycle -p -u {url} content.cookies.accept
+         all no-3rdparty never ;; reload
++      zH: tree-tab-promote
++      zL: tree-tab-demote
++      zJ: tab-next -s
++      zK: tab-prev -s
++      zd: tab-close -r
++      zg: cmd-set-text -s :tree-tab-create-group -r
++      zG: cmd-set-text -s :tree-tab-create-group
++      za: tree-tab-toggle-hide
++      zp: tab-focus parent
++      zo: cmd-set-text --space :open -tr
++      zO: cmd-set-text --space :open -tS
+     insert:
+       <Ctrl-E>: edit-text
+       <Shift-Ins>: insert-text -- {primary}
+diff --git a/qutebrowser/config/configtypes.py b/qutebrowser/config/configtypes.py
+index b029194fe..92f5d78ad 100644
+--- a/qutebrowser/config/configtypes.py
++++ b/qutebrowser/config/configtypes.py
+@@ -1954,6 +1954,21 @@ class NewTabPosition(String):
+             ('last', "At the end."))
+ 
+ 
++class NewChildPosition(String):
++
++    """How new children are positioned."""
++
++    def __init__(
++        self, *,
++        none_ok: bool = False,
++        completions: _Completions = None,
++    ) -> None:
++        super().__init__(none_ok=none_ok, completions=completions)
++        self.valid_values = ValidValues(
++            ('first', "At the beginning."),
++            ('last', "At the end."))
++
++
+ class LogLevel(String):
+ 
+     """A logging level."""
+diff --git a/qutebrowser/html/tree_group.html b/qutebrowser/html/tree_group.html
+new file mode 100644
+index 000000000..b3717e52b
+--- /dev/null
++++ b/qutebrowser/html/tree_group.html
+@@ -0,0 +1,65 @@
++{% extends "base.html" %}
++{% block style %}
++h1, p {
++    margin-left: 3rem;
++}
++
++pre {
++    margin-left: 6em;
++}
++{% endblock %}
++{% block content %}
++<h1>
++    {{ title }}
++</h1>
++<p>
++    <em>Group for tree tabs</em>
++</p>
++<pre>
++{% raw %}
++                       _.
++                _~.:'^%^ >@~.
++             ,-~              ? =*=
++           $^_`  `  , '   ,    +   -.,
++        (*-^. , *            ;'       >
++      >.      ,>    .     ' .,.,.      %-.,_ ,.-,
++      #    ' ` " - "     *    .,.      *   .^    `
++     *@!    ., *    ' '    ,    ;'   '         .  %!
++      &       "  .`      :'              `   '   . `~,
++     &    '        .`  '   '  .     '":   :          +.
++     ^      .",  ,       `      '   `   * , '   `      |
++      ]     *   .   , ""]   ..    ` . , `  , "  . . '  ,;,
++      %  '         ::,  ,   /    ,            '   ,     ;
++    .* ,*    /       *%     \  .  .  *'  `    ,    '     '.
++   ?     > .   ,      ::. :;^^.     %`      '        `     @
++  /   '   `/      `    &#@%^^      `&``   `     %;;       %
++ ;:       :%   *  *  :$%)\      '  `@%$        @%^      ,).
++ .    #    %&^     (!*^ .\,.   `      ^@%^  $#%%^  `   >
++ \           :#$%  #^&#   :   `  *      %###$%@!       &
++  |  '  *     %$#@)$*}]           `     `#@#%%^      *^
++   :     *'  *  @%&&^:$   `  '   `%%.  #$$$^^-,     7
++    &;            @#$~~   '   `     @#$%&      $,*.-
++     *...*^  .._   %$$#@!   @ .,  *&&#@
++         :..^   -   !%&@}{#&     @#$@%
++                 --_..%#%%$#&% #&%$#;:
++                        $%#^%#@@%%*&;;
++                         a%##@%%@% ;:;
++                           %####j#:::;
++                            &#%Rj;%;;:
++                            &#%%#;::;
++                            $#%##:%::
++                            "#%%#;:;
++                           ."$###:::
++                           #&$%%#:;:
++                           %&#%%#::;
++                           %&%###;::
++                           &&#%%#:;;
++                          *@&#%#};:;
++                          $#%#%%^:::
++                         *@#$#%#;::;:
++                        %%@#$####@$:;:
++                    ...%###pinusc@$%%:._____
++{% endraw %}
++
++</pre>
++{% endblock %}
+diff --git a/qutebrowser/mainwindow/mainwindow.py b/qutebrowser/mainwindow/mainwindow.py
+index 0d6fcf29f..dadd4a5c0 100644
+--- a/qutebrowser/mainwindow/mainwindow.py
++++ b/qutebrowser/mainwindow/mainwindow.py
+@@ -8,7 +8,7 @@ import binascii
+ import base64
+ import itertools
+ import functools
+-from typing import Optional, cast
++from typing import Optional, TypeAlias, Union, cast
+ from collections.abc import MutableSequence
+ 
+ from qutebrowser.qt import machinery
+@@ -196,7 +196,7 @@ class MainWindow(QWidget):
+         super().__init__(parent)
+         # Late import to avoid a circular dependency
+         # - browsertab -> hints -> webelem -> mainwindow -> bar -> browsertab
+-        from qutebrowser.mainwindow import tabbedbrowser
++        from qutebrowser.mainwindow import treetabbedbrowser, tabbedbrowser
+         from qutebrowser.mainwindow.statusbar import bar
+ 
+         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+@@ -225,8 +225,14 @@ class MainWindow(QWidget):
+ 
+         self.is_private = config.val.content.private_browsing or private
+ 
+-        self.tabbed_browser: tabbedbrowser.TabbedBrowser = tabbedbrowser.TabbedBrowser(
+-            win_id=self.win_id, private=self.is_private, parent=self)
++        self.tabbed_browser: Union[tabbedbrowser.TabbedBrowser,
++                                   treetabbedbrowser.TreeTabbedBrowser]
++        if config.val.tabs.tree_tabs:
++            self.tabbed_browser = treetabbedbrowser.TreeTabbedBrowser(
++                win_id=self.win_id, private=self.is_private, parent=self)
++        else:
++            self.tabbed_browser = tabbedbrowser.TabbedBrowser(
++                win_id=self.win_id, private=self.is_private, parent=self)
+         objreg.register('tabbed-browser', self.tabbed_browser, scope='window',
+                         window=self.win_id)
+         self._init_command_dispatcher()
+@@ -500,8 +506,10 @@ class MainWindow(QWidget):
+         mode_manager.keystring_updated.connect(
+             self.status.keystring.on_keystring_updated)
+         self.status.cmd.got_cmd[str].connect(self._commandrunner.run_safely)
+-        self.status.cmd.got_cmd[str, int].connect(self._commandrunner.run_safely)
+-        self.status.cmd.returnPressed.connect(self.tabbed_browser.on_cmd_return_pressed)
++        self.status.cmd.got_cmd[str, int].connect(
++            self._commandrunner.run_safely)
++        self.status.cmd.returnPressed.connect(
++            self.tabbed_browser.on_cmd_return_pressed)
+         self.status.cmd.got_search.connect(self._command_dispatcher.search)
+ 
+         # key hint popup
+diff --git a/qutebrowser/mainwindow/tabbedbrowser.py b/qutebrowser/mainwindow/tabbedbrowser.py
+index 5110a2d69..f82edcfb9 100644
+--- a/qutebrowser/mainwindow/tabbedbrowser.py
++++ b/qutebrowser/mainwindow/tabbedbrowser.py
+@@ -12,7 +12,7 @@ import weakref
+ import datetime
+ import dataclasses
+ from typing import (
+-    Any, Optional)
++    Any, Optional, TypeAlias, Union)
+ from collections.abc import Mapping, MutableMapping, MutableSequence
+ 
+ from qutebrowser.qt.widgets import QSizePolicy, QWidget, QApplication
+@@ -37,7 +37,32 @@ class _UndoEntry:
+     index: int
+     pinned: bool
+     created_at: datetime.datetime = dataclasses.field(
+-        default_factory=datetime.datetime.now)
++        default_factory=datetime.datetime.now,
++        init=False,  # WORKAROUND until py3.10 with kw_only: https://www.trueblade.com/blogs/news/python-3-10-new-dataclass-features
++    )
++
++    def restore_into_tab(self, tab: browsertab.AbstractTab) -> None:
++        """Set the url, history and state of `tab` from this undo entry."""
++        tab.history.private_api.deserialize(self.history)
++        tab.set_pinned(self.pinned)
++        tab.setFocus()
++
++    @classmethod
++    def from_tab(
++        cls, tab: browsertab.AbstractTab, idx: int
++    ) -> Union["_UndoEntry", list["_UndoEntry"]]:
++        """Generate an undo entry from `tab`."""
++        try:
++            history_data = tab.history.private_api.serialize()
++        except browsertab.WebTabError:
++            return None  # special URL
++
++        return cls(
++            url=tab.url(),
++            history=history_data,
++            index=idx,
++            pinned=tab.data.pinned,
++        )
+ 
+ 
+ UndoStackType = MutableSequence[MutableSequence[_UndoEntry]]
+@@ -197,17 +222,20 @@ class TabbedBrowser(QWidget):
+     resized = pyqtSignal('QRect')
+     current_tab_changed = pyqtSignal(browsertab.AbstractTab)
+     new_tab = pyqtSignal(browsertab.AbstractTab, int)
++    is_treetabbedbrowser = False
+     shutting_down = pyqtSignal()
++    _undo_class = _UndoEntry
+ 
+     def __init__(self, *, win_id, private, parent=None):
+         if private:
+             assert not qtutils.is_single_process()
+         super().__init__(parent)
+-        self.widget = tabwidget.TabWidget(win_id, parent=self)
+         self._win_id = win_id
+         self._tab_insert_idx_left = 0
+         self._tab_insert_idx_right = -1
+         self.is_shutting_down = False
++
++        self.widget = self._create_tab_widget()
+         self.widget.tabCloseRequested.connect(self.on_tab_close_requested)
+         self.widget.new_tab_requested.connect(
+             self.tabopen)  # type: ignore[arg-type,unused-ignore]
+@@ -245,6 +273,9 @@ class TabbedBrowser(QWidget):
+         config.instance.changed.connect(self._on_config_changed)
+         quitter.instance.shutting_down.connect(self.shutdown)
+ 
++    def _create_tab_widget(self):
++        return tabwidget.TabWidget(self._win_id, parent=self)
++
+     def _update_stack_size(self):
+         newsize = config.instance.get('tabs.undo_stack_size')
+         if newsize < 0:
+@@ -283,9 +314,11 @@ class TabbedBrowser(QWidget):
+             raise TabDeletedError("index is -1!")
+         return idx
+ 
+-    def widgets(self):
++    def widgets(self) -> list[browsertab.AbstractTab]:
+         """Get a list of open tab widgets.
+ 
++        Consider using `tabs()` instead of this method.
++
+         We don't implement this as generator so we can delete tabs while
+         iterating over the list.
+         """
+@@ -298,6 +331,18 @@ class TabbedBrowser(QWidget):
+                 widgets.append(widget)
+         return widgets
+ 
++    def tabs(
++        self,
++        include_hidden: bool = False,  # pylint: disable=unused-argument
++    ) -> list[browsertab.AbstractTab]:
++        """Get a list of tabs in this browser.
++
++        Args:
++            include_hidden: Include child tabs which are not currently in the
++                            tab bar.
++        """
++        return self.widgets()
++
+     def _update_window_title(self, field=None):
+         """Change the window title to match the current tab.
+ 
+@@ -379,7 +424,7 @@ class TabbedBrowser(QWidget):
+             tab.history_item_triggered.connect(
+                 history.web_history.add_from_tab)
+ 
+-    def _current_tab(self) -> browsertab.AbstractTab:
++    def current_tab(self) -> browsertab.AbstractTab:
+         """Get the current browser tab.
+ 
+         Note: The assert ensures the current tab is never None.
+@@ -444,7 +489,7 @@ class TabbedBrowser(QWidget):
+         else:
+             yes_action()
+ 
+-    def close_tab(self, tab, *, add_undo=True, new_undo=True, transfer=False):
++    def close_tab(self, tab, *, add_undo=True, new_undo=True, transfer=False, recursive=False):
+         """Close a tab.
+ 
+         Args:
+@@ -463,7 +508,7 @@ class TabbedBrowser(QWidget):
+         if last_close == 'ignore' and count == 1:
+             return
+ 
+-        self._remove_tab(tab, add_undo=add_undo, new_undo=new_undo)
++        self._remove_tab(tab, add_undo=add_undo, new_undo=new_undo, recursive=recursive)
+ 
+         if count == 1:  # We just closed the last tab above.
+             if last_close == 'close':
+@@ -476,7 +521,15 @@ class TabbedBrowser(QWidget):
+             elif last_close == 'default-page':
+                 self.load_url(config.val.url.default_page, newtab=True)
+ 
+-    def _remove_tab(self, tab, *, add_undo=True, new_undo=True, crashed=False):
++    def _remove_tab(
++        self,
++        tab,
++        *,
++        add_undo=True,
++        new_undo=True,
++        crashed=False,
++        recursive=False,  # pylint: disable=unused-argument
++    ):
+         """Remove a tab from the tab list and delete it properly.
+ 
+         Args:
+@@ -486,6 +539,7 @@ class TabbedBrowser(QWidget):
+             crashed: Whether we're closing a tab with crashed renderer process.
+         """
+         idx = self.widget.indexOf(tab)
++
+         if idx == -1:
+             if crashed:
+                 return
+@@ -496,36 +550,46 @@ class TabbedBrowser(QWidget):
+ 
+         tab.pending_removal = True
+ 
++        if add_undo:
++            self._add_undo_entry(tab, new_undo=new_undo)
++
++        tab.private_api.shutdown()
++        self.widget.removeTab(idx)
++
++        tab.deleteLater()
++
++    def _add_undo_entry(self, tab, new_undo):
+         if tab.url().isEmpty():
+             # There are some good reasons why a URL could be empty
+             # (target="_blank" with a download, see [1]), so we silently ignore
+             # this.
+             # [1] https://github.com/qutebrowser/qutebrowser/issues/163
+-            pass
+-        elif not tab.url().isValid():
++            return
++
++        if not tab.url().isValid():
+             # We display a warning for URLs which are not empty but invalid -
+             # but we don't return here because we want the tab to close either
+             # way.
+             urlutils.invalid_url_error(tab.url(), "saving tab")
+-        elif add_undo:
+-            try:
+-                history_data = tab.history.private_api.serialize()
+-            except browsertab.WebTabError:
+-                pass  # special URL
+-            else:
+-                entry = _UndoEntry(url=tab.url(),
+-                                   history=history_data,
+-                                   index=idx,
+-                                   pinned=tab.data.pinned)
+-                if new_undo or not self.undo_stack:
+-                    self.undo_stack.append([entry])
+-                else:
+-                    self.undo_stack[-1].append(entry)
++            return
+ 
+-        tab.private_api.shutdown()
+-        self.widget.removeTab(idx)
++        idx = self.widget.indexOf(tab)
++        entry = self._undo_class.from_tab(tab, idx)
++        if not entry:
++            return
+ 
+-        tab.deleteLater()
++        if isinstance(entry, self._undo_class):
++            if new_undo or not self.undo_stack:
++                self.undo_stack.append([entry])
++            else:
++                self.undo_stack[-1].append(entry)
++        else:
++            assert len(entry) > 0
++            entries = entry
++            if new_undo:
++                self.undo_stack.append(entries)
++            else:
++                self.undo_stack[-1].extend(entries)
+ 
+     def undo(self, depth=1):
+         """Undo removing of a tab or tabs."""
+@@ -560,11 +624,14 @@ class TabbedBrowser(QWidget):
+                 assert newtab is not None
+                 use_current_tab = False
+             else:
+-                newtab = self.tabopen(background=False, idx=entry.index)
++                # FIXME:typing mypy thinks this is None due to @pyqtSlot
++                newtab = self.tabopen(
++                    background=False,
++                    related=False,
++                    idx=entry.index
++                )
+ 
+-            newtab.history.private_api.deserialize(entry.history)
+-            newtab.set_pinned(entry.pinned)
+-            newtab.setFocus()
++            entry.restore_into_tab(newtab)
+ 
+     @pyqtSlot('QUrl', bool)
+     def load_url(self, url, newtab):
+@@ -578,7 +645,7 @@ class TabbedBrowser(QWidget):
+         if newtab or self.widget.currentWidget() is None:
+             self.tabopen(url, background=False)
+         else:
+-            self._current_tab().load_url(url)
++            self.current_tab().load_url(url)
+ 
+     @pyqtSlot(int)
+     def on_tab_close_requested(self, idx):
+@@ -607,7 +674,8 @@ class TabbedBrowser(QWidget):
+             self, url: QUrl = None,
+             background: bool = None,
+             related: bool = True,
+-            idx: int = None,
++            idx: int | None = None,
++            sibling: bool = False,  # pylint: disable=unused-argument
+     ) -> browsertab.AbstractTab:
+         """Open a new tab with a given URL.
+ 
+@@ -652,7 +720,7 @@ class TabbedBrowser(QWidget):
+ 
+         if idx is None:
+             idx = self._get_new_tab_idx(related)
+-        self.widget.insertTab(idx, tab, "")
++        idx = self.widget.insertTab(idx, tab, "")
+ 
+         if url is not None:
+             tab.load_url(url)
+@@ -663,7 +731,7 @@ class TabbedBrowser(QWidget):
+             # Make sure the background tab has the correct initial size.
+             # With a foreground tab, it's going to be resized correctly by the
+             # layout anyways.
+-            current_widget = self._current_tab()
++            current_widget = self.current_tab()
+             tab.resize(current_widget.size())
+             self.widget.tab_index_changed.emit(self.widget.currentIndex(),
+                                                self.widget.count())
+@@ -1089,7 +1157,7 @@ class TabbedBrowser(QWidget):
+             if key != "'":
+                 message.error("Failed to set mark: url invalid")
+             return
+-        point = self._current_tab().scroller.pos_px()
++        point = self.current_tab().scroller.pos_px()
+ 
+         if key.isupper():
+             self._global_marks[key] = point, url
+@@ -1110,7 +1178,7 @@ class TabbedBrowser(QWidget):
+         except qtutils.QtValueError:
+             urlkey = None
+ 
+-        tab = self._current_tab()
++        tab = self.current_tab()
+ 
+         if key.isupper():
+             if key in self._global_marks:
+diff --git a/qutebrowser/mainwindow/tabwidget.py b/qutebrowser/mainwindow/tabwidget.py
+index 316c139e3..c608c7ba4 100644
+--- a/qutebrowser/mainwindow/tabwidget.py
++++ b/qutebrowser/mainwindow/tabwidget.py
+@@ -13,7 +13,7 @@ from qutebrowser.qt.core import (pyqtSignal, pyqtSlot, Qt, QSize, QRect, QPoint,
+                           QTimer, QUrl)
+ from qutebrowser.qt.widgets import (QTabWidget, QTabBar, QSizePolicy, QProxyStyle,
+                              QStyle, QStylePainter, QStyleOptionTab,
+-                             QCommonStyle)
++                             QCommonStyle, QWidget)
+ from qutebrowser.qt.gui import QIcon, QPalette, QColor
+ 
+ from qutebrowser.utils import qtutils, objreg, utils, usertypes, log
+@@ -23,7 +23,6 @@ from qutebrowser.browser import browsertab
+ 
+ 
+ class TabWidget(QTabWidget):
+-
+     """The tab widget used for TabbedBrowser.
+ 
+     Signals:
+@@ -42,18 +41,20 @@ class TabWidget(QTabWidget):
+ 
+     def __init__(self, win_id, parent=None):
+         super().__init__(parent)
++        self._tabbed_browser = parent
+         bar = TabBar(win_id, self)
+         self.setStyle(TabBarStyle())
+         self.setTabBar(bar)
+         bar.tabCloseRequested.connect(self.tabCloseRequested)
+-        bar.tabMoved.connect(functools.partial(
+-            QTimer.singleShot, 0, self.update_tab_titles))
++        bar.tabMoved.connect(self.update_tab_titles)
+         bar.currentChanged.connect(self._on_current_changed)
+         bar.new_tab_requested.connect(self._on_new_tab_requested)
+         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+         self.setDocumentMode(True)
+         self.setUsesScrollButtons(True)
+         bar.setDrawBase(False)
++        self._tab_title_update_disabled = False
++
+         self._init_config()
+         config.instance.changed.connect(self._init_config)
+ 
+@@ -79,7 +80,7 @@ class TabWidget(QTabWidget):
+         assert isinstance(bar, TabBar), bar
+         return bar
+ 
+-    def _tab_by_idx(self, idx: int) -> Optional[browsertab.AbstractTab]:
++    def _tab_by_idx(self, idx: int) -> "browsertab.AbstractTab | None":
+         """Get the tab at the given index."""
+         tab = self.widget(idx)
+         if tab is not None:
+@@ -124,6 +125,12 @@ class TabWidget(QTabWidget):
+             field: A field name which was updated. If given, the title
+                    is only set if the given field is in the template.
+         """
++        if self._tab_title_update_disabled:
++            return
++
++        if self._tabbed_browser.is_shutting_down:
++            return
++
+         assert idx != -1
+         tab = self._tab_by_idx(idx)
+         assert tab is not None
+@@ -176,6 +183,9 @@ class TabWidget(QTabWidget):
+         fields['perc_raw'] = tab.progress()
+         fields['backend'] = objects.backend.name
+         fields['private'] = ' [Private Mode] ' if tab.is_private else ''
++        fields['tree'] = ''
++        fields['collapsed'] = ''
++
+         try:
+             if tab.audio.is_muted():
+                 fields['audio'] = TabWidget.MUTE_STRING
+@@ -238,8 +248,17 @@ class TabWidget(QTabWidget):
+             bar.setVisible(True)
+             bar.setUpdatesEnabled(True)
+ 
++    @contextlib.contextmanager
++    def _disable_tab_title_updates(self):
++        self._tab_title_update_disabled = True
++        yield
++        self._tab_title_update_disabled = False
++
+     def update_tab_titles(self):
+         """Update all texts."""
++        if self._tab_title_update_disabled:
++            return
++
+         with self._toggle_visibility():
+             for idx in range(self.count()):
+                 self.update_tab_title(idx)
+@@ -334,7 +353,7 @@ class TabWidget(QTabWidget):
+         qtutils.ensure_valid(url)
+         return url
+ 
+-    def update_tab_favicon(self, tab: browsertab.AbstractTab) -> None:
++    def update_tab_favicon(self, tab: QWidget) -> None:
+         """Update favicon of the given tab."""
+         idx = self.indexOf(tab)
+ 
+diff --git a/qutebrowser/mainwindow/treetabbedbrowser.py b/qutebrowser/mainwindow/treetabbedbrowser.py
+new file mode 100644
+index 000000000..756e4a2f2
+--- /dev/null
++++ b/qutebrowser/mainwindow/treetabbedbrowser.py
+@@ -0,0 +1,409 @@
++# SPDX-FileCopyrightText: Giuseppe Stelluto (pinusc) <giuseppe@gstelluto.com>
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
++"""Subclass of TabbedBrowser to provide tree-tab functionality."""
++
++import collections
++import dataclasses
++import functools
++from typing import Union
++from qutebrowser.qt.core import pyqtSlot, QUrl
++
++from qutebrowser.config import config
++from qutebrowser.mainwindow.tabbedbrowser import TabbedBrowser, _UndoEntry
++from qutebrowser.mainwindow.treetabwidget import TreeTabWidget
++from qutebrowser.browser import browsertab
++from qutebrowser.misc import notree
++from qutebrowser.qt.widgets import QTabBar
++
++
++@dataclasses.dataclass
++class _TreeUndoEntry(_UndoEntry):
++    """Information needed for :undo."""
++
++    uid: int
++    parent_node_uid: int
++    children_node_uids: list[int]
++    local_index: int  # index of the tab relative to its siblings
++
++    def restore_into_tab(self, tab: browsertab.AbstractTab) -> None:
++        super().restore_into_tab(tab)
++
++        root = tab.node.path[0]
++        uid = self.uid
++        parent_uid = self.parent_node_uid
++        parent_node = root.get_descendent_by_uid(parent_uid)
++        if not parent_node:
++            parent_node = root
++
++        children = []
++        for child_uid in self.children_node_uids:
++            child_node = root.get_descendent_by_uid(child_uid)
++            if child_node:
++                children.append(child_node)
++        tab.node.parent = None  # Remove the node from the tree
++        tab.node = notree.Node(tab, parent_node,
++                               children, uid)
++
++        # correctly reposition the tab
++        local_idx = self.local_index
++        if tab.node.parent:  # should always be true
++            new_siblings = list(tab.node.parent.children)
++            new_siblings.remove(tab.node)
++            new_siblings.insert(local_idx, tab.node)
++            tab.node.parent.children = new_siblings
++
++    @classmethod
++    def from_tab(
++        cls,
++        tab: browsertab.AbstractTab,
++        idx: int,
++        recursing: bool = False,
++    ) -> Union["_TreeUndoEntry", list["_TreeUndoEntry"]]:
++        """Make a TreeUndoEntry from a Node."""
++        node = tab.node
++        url = node.value.url()
++        try:
++            history_data = tab.history.private_api.serialize()
++        except browsertab.WebTabError:
++            return None  # special URL
++
++        if not recursing and node.collapsed:
++            entries = [
++                cls.from_tab(descendent.value, idx+1, recursing=True)
++                for descendent in
++                node.traverse(notree.TraverseOrder.POST_R)
++            ]
++            entries = [entry for entry in entries if entry]
++            return entries
++
++        pinned = node.value.data.pinned
++        uid = node.uid
++        parent_uid = node.parent.uid
++        if recursing:
++            # Recursively removed nodes will never have any existing children
++            # to re-parent in the tree they are being added into, children
++            # will always be added later as the undo stack is worked through.
++            # So remove child IDs here so we don't confuse undo() later.
++            children = []
++        else:
++            children = [n.uid for n in node.children]
++        local_idx = node.index
++        return cls(
++            url=url,
++            history=history_data,
++            # The index argument is redundant given the parent and local index
++            # info, but required by the parent class.
++            index=idx,
++            pinned=pinned,
++            uid=uid,
++            parent_node_uid=parent_uid,
++            children_node_uids=children,
++            local_index=local_idx,
++        )
++
++
++class TreeTabbedBrowser(TabbedBrowser):
++    """Subclass of TabbedBrowser to provide tree-tab functionality.
++
++    Extends TabbedBrowser methods (mostly tabopen, undo, and _remove_tab) so
++    that the internal tree is updated after every action.
++
++    Provides methods to hide and show subtrees, and to cycle visibility.
++    """
++
++    is_treetabbedbrowser = True
++    _undo_class = _TreeUndoEntry
++
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        self._tree_tab_child_rel_idx = 0
++        self._tree_tab_sibling_rel_idx = 0
++        self._tree_tab_toplevel_rel_idx = 0
++
++    def _create_tab_widget(self):
++        """Return the tab widget that can display a tree structure."""
++        return TreeTabWidget(self._win_id, parent=self)
++
++    def _remove_tab(self, tab, *, add_undo=True, new_undo=True, crashed=False, recursive=False):
++        """Handle children positioning after a tab is removed."""
++        if not tab.url().isEmpty() and tab.url().isValid() and add_undo:
++            self._add_undo_entry(tab, new_undo)
++
++        if recursive:
++            for descendent in tab.node.traverse(
++                order=notree.TraverseOrder.POST_R,
++                render_collapsed=False
++            ):
++                self.tab_close_prompt_if_pinned(
++                    descendent.value,
++                    False,
++                    functools.partial(
++                        self._remove_tab,
++                        descendent.value,
++                        add_undo=add_undo,
++                        new_undo=new_undo,
++                        crashed=crashed,
++                        recursive=False,
++                    )
++                )
++                new_undo = False
++            return
++
++        node = tab.node
++        parent = node.parent
++        current_tab = self.current_tab()
++
++        # Override tabs.select_on_remove behavior to be tree aware.
++        # The default behavior is in QTabBar.removeTab(), by way of
++        # QTabWidget.removeTab(). But here we are detaching the tab from the
++        # tree before those methods get called, so if we want to have a tree
++        # aware behavior we need to implement that here by selecting the new
++        # tab before the closing the current one.
++        if tab == current_tab:
++            selection_behavior = self.widget.tabBar().selectionBehaviorOnRemove()
++            # Given a tree structure like:
++            # - one
++            #   - two
++            # - three (active)
++            # If the setting is "prev" (aka left) we want to end up with tab
++            # "one" selected after closing tab "three". Switch to either the
++            # current tab's previous sibling or its parent.
++            if selection_behavior == QTabBar.SelectionBehavior.SelectLeftTab:
++                siblings = parent.children
++                rel_index = siblings.index(node)
++                if rel_index == 0:
++                    next_tab = parent.value
++                else:
++                    next_tab = siblings[rel_index-1].value
++                self.widget.setCurrentWidget(next_tab)
++
++        if node.collapsed:
++            # Collapsed nodes have already been removed from the TabWidget so
++            # we can't ask super() to dispose of them and need to do it
++            # ourselves.
++            for descendent in node.traverse(
++                order=notree.TraverseOrder.POST_R,
++                render_collapsed=True
++            ):
++                descendent.parent = None
++                descendent_tab = descendent.value
++                descendent_tab.private_api.shutdown()
++                descendent_tab.deleteLater()
++        elif parent:
++            siblings = list(parent.children)
++            children = node.children
++
++            if children:
++                # Promote first child,
++                # make that promoted node the parent of our other children
++                # give the promoted node our position in our siblings list.
++                next_node = children[0]
++
++                for n in children[1:]:
++                    n.parent = next_node
++
++                # swap nodes
++                node_idx = siblings.index(node)
++                siblings[node_idx] = next_node
++
++                parent.children = tuple(siblings)
++                assert not node.children
++
++            node.parent = None
++
++        super()._remove_tab(tab, add_undo=False, new_undo=False,
++                            crashed=crashed)
++
++        self.widget.tree_tab_update()
++
++    def undo(self, depth=1):
++        """Undo removing of a tab or tabs."""
++        super().undo(depth)
++        self.widget.tree_tab_update()
++
++    def tabs(
++        self,
++        include_hidden: bool = False,
++    ) -> list[browsertab.AbstractTab]:
++        """Get a list of tabs in this browser.
++
++        Args:
++            include_hidden: Include child tabs which are not currently in the
++                            tab bar.
++        """
++        return [
++            node.value
++            for node
++            in self.widget.tree_root.traverse(
++                render_collapsed=include_hidden,
++            )
++            if node.value
++        ]
++
++    @pyqtSlot('QUrl')
++    @pyqtSlot('QUrl', bool)
++    @pyqtSlot('QUrl', bool, bool)
++    def tabopen(
++            self, url: QUrl = None,
++            background: bool = None,
++            related: bool = True,
++            idx: int = None,
++            sibling: bool = False,
++    ) -> browsertab.AbstractTab:
++        """Open a new tab with a given url.
++
++        Args:
++            related: Whether to set the tab as a child of the currently focused
++                     tab. Follows `tabs.new_position.tree.related`.
++            sibling: Whether to set the tab as a sibling of the currently
++                     focused tab.  Follows `tabs.new_position.tree.sibling`.
++
++        """
++        # Save the current tab now before letting super create the new tab
++        # (and possibly give it focus). To insert the new tab correctly in the
++        # tree structure later we may need to know which tab it was opened
++        # from (for the `related` and `sibling` cases).
++        cur_tab = self.widget.currentWidget()
++        tab = super().tabopen(url, background, related, idx)
++
++        # Some trivial cases where we don't need to do positioning:
++
++        # 1. this is the first tab in the window.
++        if cur_tab is None:
++            assert self.widget.count() == 1
++            assert tab.node.parent == self.widget.tree_root
++            return tab
++
++        if (
++            config.val.tabs.tabs_are_windows or  # 2. one tab per window
++            tab is cur_tab                       # 3. opening URL in existing tab
++        ):
++            return tab
++
++        # Some sanity checking to make sure the tab super created was set up
++        # as a tree style tab correctly. We don't have a TreeTab so this is
++        # heuristic to highlight any problems elsewhere in the application
++        # logic.
++        assert tab.node.parent, (
++            f"Node for new tab doesn't have a parent: {tab.node}"
++        )
++
++        # We may also be able to skip the positioning code below if the `idx`
++        # arg is passed in. Semgrep says that arg is used from undo() and
++        # SessionManager, both cases are updating the tree structure
++        # themselves after opening the new tab. On the other hand the only
++        # downside is we move the tab and update the tree twice. Although that
++        # may actually make loading large sessions a bit slower.
++
++        if related:
++            pos = config.val.tabs.new_position.tree.new_child
++            parent = cur_tab.node
++            # pos can only be first, last
++        elif sibling:
++            pos = config.val.tabs.new_position.tree.new_sibling
++            parent = cur_tab.node.parent
++            # pos can be first, last, prev, next
++        else:
++            pos = config.val.tabs.new_position.tree.new_toplevel
++            parent = self.widget.tree_root
++
++        self._position_tab(cur_tab.node, tab.node, pos, parent, sibling,
++                           related, background, idx)
++
++        return tab
++
++    def _position_tab(  # pylint: disable=too-many-positional-arguments
++        self,
++        cur_node: notree.Node,
++        new_node: notree.Node,
++        pos: str,
++        parent: notree.Node,
++        sibling: bool = False,
++        related: bool = True,
++        background: bool = None,
++        idx: int = None,
++    ) -> None:
++        toplevel = not sibling and not related
++        siblings = list(parent.children)
++        if new_node.parent == parent:
++            # Remove the current node from its parent's children list to avoid
++            # potentially adding it as a duplicate later.
++            siblings.remove(new_node)
++
++        if idx:
++            sibling_indices = [self.widget.indexOf(node.value) for node in siblings]
++            assert sibling_indices == sorted(sibling_indices)
++            sibling_indices.append(idx)
++            sibling_indices = sorted(sibling_indices)
++            rel_idx = sibling_indices.index(idx)
++            siblings.insert(rel_idx, new_node)
++        elif pos == 'first':
++            rel_idx = 0
++            if config.val.tabs.new_position.stacking and related:
++                rel_idx += self._tree_tab_child_rel_idx
++                self._tree_tab_child_rel_idx += 1
++            siblings.insert(rel_idx, new_node)
++        elif pos in ['prev', 'next'] and (sibling or toplevel):
++            # Pivot is the tab relative to which 'prev' or 'next' apply to.
++            # Either the current node or top of the current tree.
++            pivot = cur_node if sibling else cur_node.path[1]
++            direction = -1 if pos == 'prev' else 1
++            rel_idx = 0 if pos == 'prev' else 1
++            tgt_idx = siblings.index(pivot) + rel_idx
++            if config.val.tabs.new_position.stacking:
++                if sibling:
++                    tgt_idx += self._tree_tab_sibling_rel_idx
++                    self._tree_tab_sibling_rel_idx += direction
++                elif toplevel:
++                    tgt_idx += self._tree_tab_toplevel_rel_idx
++                    self._tree_tab_toplevel_rel_idx += direction
++            siblings.insert(tgt_idx, new_node)
++        else:  # position == 'last'
++            siblings.append(new_node)
++
++        parent.children = siblings
++        self.widget.tree_tab_update()
++        if not background:
++            self._reset_stack_counters()
++
++    def _reset_stack_counters(self):
++        self._tree_tab_child_rel_idx = 0
++        self._tree_tab_sibling_rel_idx = 0
++        self._tree_tab_toplevel_rel_idx = 0
++
++    @pyqtSlot(int)
++    def _on_current_changed(self, idx):
++        super()._on_current_changed(idx)
++        self._reset_stack_counters()
++
++    def cycle_hide_tab(self, node):
++        """Utility function for tree_tab_cycle_hide command."""
++        # height = node.height  # height is always rel_height
++        if node.collapsed:
++            node.collapsed = False
++            for descendent in node.traverse(render_collapsed=True):
++                descendent.collapsed = False
++            return
++
++        def rel_depth(n):
++            return n.depth - node.depth
++
++        levels: dict[int, list] = collections.defaultdict(list)
++        for d in node.traverse(render_collapsed=False):
++            r_depth = rel_depth(d)
++            levels[r_depth].append(d)
++
++        # Remove highest level because it's leaves (or already collapsed)
++        del levels[max(levels.keys())]
++
++        target = 0
++        for level in sorted(levels, reverse=True):
++            nodes = levels[level]
++            if not all(n.collapsed or not n.children for n in nodes):
++                target = level
++                break
++        for n in levels[target]:
++            if not n.collapsed and n.children:
++                n.collapsed = True
+diff --git a/qutebrowser/mainwindow/treetabwidget.py b/qutebrowser/mainwindow/treetabwidget.py
+new file mode 100644
+index 000000000..e463baaf7
+--- /dev/null
++++ b/qutebrowser/mainwindow/treetabwidget.py
+@@ -0,0 +1,137 @@
++# SPDX-FileCopyrightText: Giuseppe Stelluto (pinusc) <giuseppe@gstelluto.com>
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
++"""Extension of TabWidget for tree-tab functionality."""
++
++from qutebrowser.mainwindow.tabwidget import TabWidget
++from qutebrowser.misc.notree import Node
++from qutebrowser.utils import log
++
++
++class TreeTabWidget(TabWidget):
++    """Tab widget used in TabbedBrowser, with tree-functionality.
++
++    Handles correct rendering of the tree as a tab field, and correct
++    positioning of tabs according to tree structure.
++    """
++
++    def __init__(self, win_id, parent=None):
++        # root of the tab tree, common for all tabs in the window
++        self.tree_root = Node(None)
++        super().__init__(win_id, parent)
++
++    def get_tab_fields(self, idx):
++        """Add tree field data to normal tab field data."""
++        fields = super().get_tab_fields(idx)
++
++        if len(self.tree_root.children) == 0:
++            # Presumably the window is still being initialized
++            log.misc.vdebug(f"Tree root has no children. Are we starting up? fields={fields}")
++            return fields
++
++        rendered_tree = self.tree_root.render()
++        tab = self.widget(idx)
++        found = [
++            prefix
++            for prefix, node in rendered_tree
++            if node.value == tab
++        ]
++
++        if len(found) == 1:
++            # we remove the first two chars because every tab is child of tree
++            # root and that gets rendered as well
++            fields['tree'] = found[0][2:]
++            fields['collapsed'] = '[...] ' if tab.node.collapsed else ''
++            return fields
++
++        # Beyond here we have a mismatch between the tab widget and the tree.
++        # Try to identify known situations where this happens precisely and
++        # handle them gracefully. Blow up on unknown situations so we don't
++        # miss them.
++
++        # Just sanity checking, we haven't seen this yet.
++        assert len(found) == 0, (
++            "Found multiple tree nodes with the same tab as value: tab={tab}"
++        )
++
++        # Having more tabs in the widget when loading a session with a
++        # collapsed group in is a known case. Check for it with a heuristic
++        # (for now) and assert if that doesn't look like that's how we got
++        # here.
++        all_nodes = self.tree_root.traverse()
++        node = [n for n in all_nodes if n.value == tab][0]
++        is_hidden = any(n.collapsed for n in node.path)
++
++        tabs = [str(self.widget(idx)) for idx in range(self.count())]
++        difference = len(rendered_tree) - 1 - len(tabs)
++        # empty_urls here is a proxy for "there is a session being loaded into
++        # this window"
++        empty_urls = all(
++            not self.widget(idx).url().toString() for idx in range(self.count())
++        )
++        if empty_urls and is_hidden:
++            # All tabs will be added to the tab widget during session load
++            # and they will only be removed later when the widget is
++            # updated from the tree. Meanwhile, if we get here we'll have
++            # hidden tabs present in the widget but absent from the node.
++            # To detect this situation more clearly we could do something like
++            # have a is_starting_up or is_loading_session attribute on the
++            # tabwidget/tabbbedbrowser. Or have the session manager add all
++            # nodes to the tree uncollapsed initially and then go through and
++            # collapse them.
++            log.misc.vdebug(
++                "get_tab_fields() called with different amount of tabs in "
++                f"widget vs in the tree: difference={difference} "
++                f"tree={rendered_tree[1:]} tabs={tabs}"
++            )
++        else:
++            # If we get here then we have another case to investigate.
++            assert difference == 0, (
++                "Different amount of nodes in tree than widget. "
++                f"difference={difference} tree={rendered_tree[1:]} tabs={tabs}"
++            )
++
++        return fields
++
++    def update_tree_tab_positions(self):
++        """Update tab positions according to the tree structure."""
++        nodes = self.tree_root.traverse(render_collapsed=False)
++        for idx, node in enumerate(nodes):
++            if idx > 0:
++                cur_idx = self.indexOf(node.value)
++                self.tabBar().moveTab(cur_idx, idx-1)
++
++    def update_tree_tab_visibility(self):
++        """Hide collapsed tabs and show uncollapsed ones.
++
++        Sync the internal tree to the tabs the user can actually see.
++        """
++        for node in self.tree_root.traverse():
++            if node.value is None:
++                continue
++
++            should_be_hidden = any(ancestor.collapsed for ancestor in node.path[:-1])
++            is_shown = self.indexOf(node.value) != -1
++            if should_be_hidden and is_shown:
++                # node should be hidden but is shown
++                cur_tab = node.value
++                idx = self.indexOf(cur_tab)
++                if idx != -1:
++                    self.removeTab(idx)
++            elif not should_be_hidden and not is_shown:
++                # node should be shown but is hidden
++                parent = node.parent
++                tab = node.value
++                name = tab.title()
++                icon = tab.icon()
++                parent_idx = self.indexOf(node.parent.value)
++                self.insertTab(parent_idx + 1, tab, icon, name)
++                tab.node.parent = parent  # insertTab resets node
++
++    def tree_tab_update(self):
++        """Update titles and positions."""
++        with self._disable_tab_title_updates():
++            self.update_tree_tab_visibility()
++            self.update_tree_tab_positions()
++        self.update_tab_titles()
+diff --git a/qutebrowser/misc/notree.py b/qutebrowser/misc/notree.py
+new file mode 100644
+index 000000000..318215cb7
+--- /dev/null
++++ b/qutebrowser/misc/notree.py
+@@ -0,0 +1,345 @@
++# SPDX-FileCopyrightText: Giuseppe Stelluto (pinusc) <giuseppe@gstelluto.com>
++#
++# SPDX-License-Identifier: GPL-3.0-or-later
++
++"""Tree library for tree-tabs.
++
++The fundamental unit is the Node class.
++
++Create a tree with with Node(value, parent):
++root = Node('foo')
++child = Node('bar', root)
++child2 = Node('baz', root)
++child3 = Node('lorem', child)
++
++You can also assign parent after instantiation, or even reassign it:
++child4 = Node('ipsum')
++child4.parent = root
++
++Assign children:
++child.children = []
++child2.children = [child4, child3]
++child3.parent
++> Node('foo/bar/baz')
++
++Render a tree with render_tree(root_node):
++render_tree(root)
++
++> ('', 'foo')
++> ('├─', 'bar')
++> ('│ ├─', 'lorem')
++> ('│ └─', 'ipsum')
++> ('└─', 'baz')
++"""
++import enum
++from typing import Optional, TypeVar, Generic
++from collections.abc import Iterable, Sequence
++import itertools
++
++# For Node.render
++CORNER = '└─'
++INTERSECTION = '├─'
++PIPE = '│'
++
++
++class TreeError(RuntimeError):
++    """Exception used for tree-related errors."""
++
++
++class TraverseOrder(enum.Enum):
++    """Tree traversal order for Node.traverse().
++
++    All traversals are depth first.
++    See https://en.wikipedia.org/wiki/Depth-first_search#Vertex_orderings
++
++    Attributes:
++        PRE: pre-order: parent then children, leftmost nodes first. Same as in Node.render().
++        POST: post-order: children then parent, leftmost nodes first, then parent.
++        POST_R: post-order-reverse: like POST but rightmost nodes first.
++    """
++
++    PRE = 'pre-order'  # pylint: disable=invalid-name
++    POST = 'post-order'  # pylint: disable=invalid-name
++    POST_R = 'post-order-reverse'  # pylint: disable=invalid-name
++
++
++uid_gen = itertools.count(0)
++
++# generic type of value held by Node
++T = TypeVar('T')
++
++
++class Node(Generic[T]):
++    """Fundamental unit of notree library.
++
++    Attributes:
++        value: The element (usually a tab) the node represents
++        parent: Node's parent.
++        children: Node's children elements.
++        siblings: Children of parent node that are not self.
++        path: List of nodes from root of tree to self value, parent, and
++            children can all be set by user. Everything else will be updated
++            accordingly, so that if `node.parent = root_node`, then `node in
++            root_node.children` will be True.
++    """
++
++    sep: str = '/'
++    __parent: Optional['Node[T]'] = None
++    # this is a global 'static' class attribute
++
++    def __init__(self,
++                 value: T,
++                 parent: Optional['Node[T]'] = None,
++                 childs: Sequence['Node[T]'] = (),
++                 uid: Optional[int] = None) -> None:
++        if uid is not None:
++            self.__uid = uid
++        else:
++            self.__uid = next(uid_gen)
++
++        self.value = value
++        # set initial values so there's no need for AttributeError checks
++        self.__parent: Optional['Node[T]'] = None
++        self.__children: list['Node[T]'] = []
++
++        # For render memoization
++        self.__modified = False
++        self.__set_modified()  # not the same as line above
++        self.__rendered: Optional[list[tuple[str, 'Node[T]']]] = None
++
++        if parent:
++            self.parent = parent  # calls setter
++        if childs:
++            self.children = childs  # this too
++
++        self.__collapsed = False
++
++    @property
++    def uid(self) -> int:
++        return self.__uid
++
++    @property
++    def parent(self) -> Optional['Node[T]']:
++        return self.__parent
++
++    @parent.setter
++    def parent(self, value: 'Node[T]') -> None:
++        """Set parent property. Also adds self to value.children."""
++        # pylint: disable=protected-access
++        assert (value is None or isinstance(value, Node))
++        if self.__parent:
++            self.__parent.__disown(self)
++            self.__parent = None
++        if value is not None:
++            value.__add_child(self)
++            self.__parent = value
++        self.__set_modified()
++
++    @property
++    def children(self) -> Sequence['Node[T]']:
++        return tuple(self.__children)
++
++    @children.setter
++    def children(self, value: Sequence['Node[T]']) -> None:
++        """Set children property, preserving order.
++
++        Also sets n.parent = self for n in value. Does not allow duplicates.
++        """
++        seen = set(value)
++        if len(seen) != len(value):
++            raise TreeError("A duplicate item is present in %r" % value)
++        new_children = list(value)
++        for child in new_children:
++            if child.parent is not self:
++                child.parent = self
++        self.__children = new_children
++        self.__set_modified()
++
++    @property
++    def path(self) -> list['Node[T]']:
++        """Get a list of all nodes from the root node to self."""
++        if self.parent is None:
++            return [self]
++        else:
++            return self.parent.path + [self]
++
++    @property
++    def depth(self) -> int:
++        """Get the number of nodes between self and the root node."""
++        return len(self.path) - 1
++
++    @property
++    def index(self) -> int:
++        """Get self's position among its siblings (self.parent.children)."""
++        if self.parent is not None:
++            return self.parent.children.index(self)
++        else:
++            raise TreeError('Node has no parent.')
++
++    @property
++    def collapsed(self) -> bool:
++        return self.__collapsed
++
++    @collapsed.setter
++    def collapsed(self, val: bool) -> None:
++        self.__collapsed = val
++        self.__set_modified()
++
++    def __set_modified(self) -> None:
++        """If self is modified, every ancestor is modified as well."""
++        for node in self.path:
++            node.__modified = True  # pylint: disable=protected-access,unused-private-member
++
++    def render(self) -> list[tuple[str, 'Node[T]']]:
++        """Render a tree with ascii symbols.
++
++        Tabs appear in the same order as in traverse() with TraverseOrder.PRE
++        Args:
++            node; the root of the tree to render
++
++        Return: list of tuples where the first item is the symbol,
++                and the second is the node it refers to
++        """
++        if not self.__modified and self.__rendered is not None:
++            return self.__rendered
++
++        result = [('', self)]
++        for child in self.children:
++            if child.children:
++                subtree = child.render()
++                if child is not self.children[-1]:
++                    subtree = [(PIPE + ' ' + c, n) for c, n in subtree]
++                    char = INTERSECTION
++                else:
++                    subtree = [('  ' + c, n) for c, n in subtree]
++                    char = CORNER
++                subtree[0] = (char, subtree[0][1])
++                if child.collapsed:
++                    result += [subtree[0]]
++                else:
++                    result += subtree
++            elif child is self.children[-1]:
++                result.append((CORNER, child))
++            else:
++                result.append((INTERSECTION, child))
++        self.__modified = False
++        self.__rendered = list(result)
++        return list(result)
++
++    def traverse(self, order: TraverseOrder = TraverseOrder.PRE,
++                 render_collapsed: bool = True) -> Iterable['Node']:
++        """Generator for `self` and all descendants.
++
++        Args:
++            order: a TraverseOrder object. See TraverseOrder documentation.
++            render_collapsed: whether to yield children of collapsed nodes
++        """
++        if order == TraverseOrder.PRE:
++            yield self
++
++        if self.collapsed and not render_collapsed:
++            if order != TraverseOrder.PRE:
++                yield self
++            return
++
++        f = reversed if order is TraverseOrder.POST_R else lambda x: x
++        for child in f(self.children):
++            if render_collapsed or not child.collapsed:
++                yield from child.traverse(order, render_collapsed)
++            else:
++                yield child
++        if order in [TraverseOrder.POST, TraverseOrder.POST_R]:
++            yield self
++
++    def __add_child(  # pylint: disable=unused-private-member
++        self,
++        node: 'Node[T]',
++    ) -> None:
++        if node not in self.__children:
++            self.__children.append(node)
++
++    def __disown(  # pylint: disable=unused-private-member
++        self,
++        value: 'Node[T]',
++    ) -> None:
++        self.__set_modified()
++        if value in self.__children:
++            self.__children.remove(value)
++
++    def get_descendent_by_uid(self, uid: int) -> Optional['Node[T]']:
++        """Return descendent identified by the provided uid.
++
++        Returns None if there is no such descendent.
++
++        Args:
++            uid: The uid of the node to return
++        """
++        for descendent in self.traverse():
++            if descendent.uid == uid:
++                return descendent
++        return None
++
++    def promote(self, times: int = 1, to: str = 'first') -> None:
++        """Makes self a child of its grandparent, i.e. sibling of its parent.
++
++        Args:
++            times: How many levels to promote the tab to. to: One of 'next',
++            'prev', 'first', 'last'. Determines the position among siblings
++            after being promoted. 'next' and 'prev' are relative to the current
++            parent.
++
++        """
++        if to not in ['first', 'last', 'next', 'prev']:
++            raise ValueError("Invalid value supplied for 'to': " + to)
++        position = {'first': 0, 'last': -1}.get(to, None)
++        diff = {'next': 1, 'prev': 0}.get(to, 1)
++        count = times
++        while count > 0:
++            if self.parent is None or self.parent.parent is None:
++                raise TreeError("Tab has no parent!")
++            grandparent = self.parent.parent
++            if position is not None:
++                idx = position
++            else:  # diff is necessarily not none
++                idx = self.parent.index + diff
++            self.parent = None
++
++            siblings = list(grandparent.children)
++            if idx != -1:
++                siblings.insert(idx, self)
++            else:
++                siblings.append(self)
++            grandparent.children = siblings
++            count -= 1
++
++    def demote(self, to: str = 'last') -> None:
++        """Demote a tab making it a child of its previous adjacent sibling."""
++        if self.parent is None or self.parent.children is None:
++            raise TreeError("Tab has no siblings!")
++        siblings = list(self.parent.children)
++
++        # we want previous node in the same subtree as current node
++        rel_idx = siblings.index(self) - 1
++
++        if rel_idx >= 0:
++            parent = siblings[rel_idx]
++            new_siblings = list(parent.children)
++            position = {'first': 0, 'last': -1}.get(to, -1)
++            if position == 0:
++                new_siblings.insert(0, self)
++            else:
++                new_siblings.append(self)
++            parent.children = new_siblings
++        else:
++            raise TreeError("Tab has no previous sibling!")
++
++    def __repr__(self) -> str:
++        try:
++            value = str(self.value.url().url())  # type: ignore
++        except Exception:
++            value = str(self.value)
++        return "<Node -%d- '%s'>" % (self.__uid, value)
++
++    def __str__(self) -> str:
++        # return "<Node '%s'>" % self.value
++        return str(self.value)
+diff --git a/qutebrowser/misc/sessions.py b/qutebrowser/misc/sessions.py
+index 5bd1143f2..486bba09c 100644
+--- a/qutebrowser/misc/sessions.py
++++ b/qutebrowser/misc/sessions.py
+@@ -122,6 +122,42 @@ class TabHistoryItem:
+                               last_visited=self.last_visited)
+ 
+ 
++def reconstruct_tree_data(window_data):
++    """Return a dict usable as a tree from a window.
++
++    Returns a dict like:
++        {
++           1: {'children': [2]},
++           2: {
++                ...tab,
++                "treetab_node_data": {
++                  "children": [],
++                  "collapsed": False,
++                  "parent": 1,
++                  "uid": 2,
++              }
++          }
++        }
++
++    Which you can traverse by starting at the node with no "treetab_node_data"
++    attribute (the root) and pulling successive levels of children from the
++    dict using their `uid`s as keys.
++
++    The ...tab part represents the usual attributes for a tab when saved in a
++    session.
++    """
++    tree_data = {}
++    root = window_data['treetab_root']
++    tree_data[root['uid']] = {
++        'children': root['children'],
++        'tab': {},
++        'collapsed': False
++    }
++    for tab in window_data['tabs']:
++        tree_data[tab['treetab_node_data']['uid']] = tab
++    return tree_data
++
++
+ class SessionManager(QObject):
+ 
+     """Manager for sessions.
+@@ -282,13 +318,31 @@ class SessionManager(QObject):
+             if getattr(active_window, 'win_id', None) == win_id:
+                 win_data['active'] = True
+             win_data['geometry'] = bytes(main_window.saveGeometry())
+-            win_data['tabs'] = []
+             if tabbed_browser.is_private:
+                 win_data['private'] = True
+-            for i, tab in enumerate(tabbed_browser.widgets()):
+-                active = i == tabbed_browser.widget.currentIndex()
+-                win_data['tabs'].append(self._save_tab(tab, active,
+-                                                       with_history=with_history))
++
++            win_data['tabs'] = []
++            for tab in tabbed_browser.tabs(include_hidden=True):
++                active = tab == tabbed_browser.current_tab()
++                tab_data = self._save_tab(tab,
++                                          active,
++                                          with_history=with_history)
++                if tabbed_browser.is_treetabbedbrowser:
++                    node = tab.node
++                    node_data = {
++                        'parent': node.parent.uid,
++                        'children': [c.uid for c in node.children],
++                        'collapsed': node.collapsed,
++                        'uid': node.uid
++                    }
++                    tab_data['treetab_node_data'] = node_data
++                win_data['tabs'].append(tab_data)
++            if tabbed_browser.is_treetabbedbrowser:
++                root = tabbed_browser.widget.tree_root
++                win_data['treetab_root'] = {
++                    'children': [c.uid for c in root.children],
++                    'uid': root.uid
++                }
+             data['windows'].append(win_data)
+         return data
+ 
+@@ -456,6 +510,86 @@ class SessionManager(QObject):
+         except ValueError as e:
+             raise SessionError(e)
+ 
++    def _load_tree(self, tabbed_browser, tree_data, legacy=False):
++        tree_keys = list(tree_data.keys())
++        if not tree_keys:
++            return None
++
++        root_data = tree_data.get(tree_keys[0])
++        if root_data is None:
++            return None
++
++        root_node = tabbed_browser.widget.tree_root
++        tab_to_focus = None
++        index = -1
++
++        def recursive_load_node(uid):
++            nonlocal tab_to_focus
++            nonlocal index
++            index += 1
++            if legacy:
++                node_data = tree_data[uid]
++                tab_data = node_data['tab']
++            else:
++                tab_data = tree_data[uid]
++                node_data = tab_data['treetab_node_data']
++            children_uids = node_data['children']
++
++            if tab_data.get('active'):
++                tab_to_focus = index
++
++            new_tab = tabbed_browser.tabopen(
++                background=False,
++                related=False,
++                idx=index,
++            )
++            self._load_tab(new_tab, tab_data)
++
++            new_tab.node.parent = root_node
++            children = [recursive_load_node(uid) for uid in children_uids]
++            new_tab.node.children = children
++            new_tab.node.collapsed = node_data['collapsed']
++            return new_tab.node
++
++        for child_uid in root_data['children']:
++            child = recursive_load_node(child_uid)
++            child.parent = root_node
++
++        # Make sure any collapsed tabs are removed from the widget.
++        # Since we only set the "collapsed" attribute after loading the tab,
++        # and the tree only gets updated in the above loop on tab loads. So if
++        # the last set of tabs we load is a collapsed group this children
++        # won't know they are support to be hidden yet.
++        tabbed_browser.widget.tree_tab_update()
++
++        return tab_to_focus
++
++    def _load_legacy_tree_tabs(self, win, tabbed_browser):
++        """Load the "legacy" tree session format.
++
++        For a number of years (pull #4602) tree tabs used a session format
++        that wasn't backwards compatible with prior session formats. In that
++        tab data was a child of a tree node. Now it's been switched to the
++        other way around. This method (along with a conditional in
++        `_load_tree()`) handle loading the old format for early adopters who
++        have session they don't want to have to rebuild.
++
++        Returns:
++          a. `(None, None)` if tree tabs where loaded, or
++          b. or a tuple of the tab index to focus and a flat list of tabs that
++             need loading if tree tabs is turned off.
++        """
++        plain_tabs = None
++        tab_to_focus = None
++        tree_data = win.get('tree')
++        if tabbed_browser.is_treetabbedbrowser:
++            tab_to_focus = self._load_tree(tabbed_browser, tree_data, legacy=True)
++            tabbed_browser.widget.tree_tab_update()
++        else:
++            plain_tabs = [tree_data[i]['tab'] for i in tree_data if
++                          tree_data[i]['tab']]
++        return tab_to_focus, plain_tabs
++
+     def _load_window(self, win):
+         """Turn yaml data into windows."""
+         window = mainwindow.MainWindow(geometry=win['geometry'],
+@@ -463,13 +597,35 @@ class SessionManager(QObject):
+         tabbed_browser = objreg.get('tabbed-browser', scope='window',
+                                     window=window.win_id)
+         tab_to_focus = None
+-        for i, tab in enumerate(win['tabs']):
+-            new_tab = tabbed_browser.tabopen(background=False)
+-            self._load_tab(new_tab, tab)
+-            if tab.get('active', False):
+-                tab_to_focus = i
+-            if new_tab.data.pinned:
+-                new_tab.set_pinned(True)
++
++        legacy_tree_loaded = False
++        if win.get('tree'):
++            tab_to_focus, tabs = self._load_legacy_tree_tabs(win, tabbed_browser)
++            legacy_tree_loaded = not tabs
++        else:
++            tabs = win['tabs']
++
++        # restore a tab tree only if the session contains treetab
++        # data and tree tabs are enabled.
++        # Otherwise, restore tabs "flat"
++        load_tree_tabs = 'treetab_root' in win.keys() and \
++            tabbed_browser.is_treetabbedbrowser
++        if load_tree_tabs:
++            tree_data = reconstruct_tree_data(win)
++            tab_to_focus = self._load_tree(tabbed_browser, tree_data)
++        elif not legacy_tree_loaded:
++            for i, tab in enumerate(tabs):
++                new_tab = tabbed_browser.tabopen(
++                    background=False,
++                    related=False,
++                    idx=i,
++                )
++                self._load_tab(new_tab, tab)
++                if tab.get('active', False):
++                    tab_to_focus = i
++                if new_tab.data.pinned:
++                    new_tab.set_pinned(True)
++
+         if tab_to_focus is not None:
+             tabbed_browser.widget.setCurrentIndex(tab_to_focus)
+ 

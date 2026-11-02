@@ -2,7 +2,7 @@
 let
   pinentry =
     if config.gtk.enable then {
-      packages = [ pkgs.pinentry-gnome3 pkgs.gcr ];
+      packages = [ pkgs.pinentry-gnome3 pkgs.gcr_3 ];
 	  package = pkgs.pinentry-gnome3;
       name = "gnome3";
     } else {
@@ -25,6 +25,12 @@ in
     ];
     pinentry.package = pinentry.package;
     #enableExtraSocket = true;
+
+	defaultCacheTtl = 3600;
+	maxCacheTtl = 43200;
+	defaultCacheTtlSsh = 3600;
+	maxCacheTtlSsh = 43200;
+
   };
 
   programs.gpg = {

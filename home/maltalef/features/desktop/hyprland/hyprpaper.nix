@@ -1,4 +1,7 @@
-{ pkgs, config, ...}: {
+{ pkgs, config, lib, ...}:
+let
+	tema = config.tema;
+in {
 	services.hyprpaper = {
 		enable = true;
 		settings = {
@@ -14,12 +17,15 @@
 			# bloque; "cover" es el default igual.) monitor vacío => todos.
 			# Ojo: el formato inline `wallpaper = monitor,path` ya no se procesa
 			# desde el config en esta versión (solo vía IPC) -> daba "no target".
+			# Con el tema (pirincho), el fondo del tema (fondo.imagen, en PNG
+			# o JPEG: hyprpaper no lee SVG); con gruvbox-verde, el
+			# wallpaper.jpg de siempre.
 			wallpaper = {
 				monitor = "";
-				path = "${config.xdg.configHome}/hypr/wallpaper.jpg";
+				path = if tema.enable then "${tema.fondo.imagen}" else "${config.xdg.configHome}/hypr/wallpaper.jpg";
 			};
 		};
 	};
 
-	xdg.configFile."hypr/wallpaper.jpg".source = ./wallpaper.jpg;
+	xdg.configFile."hypr/wallpaper.jpg" = lib.mkIf (!tema.enable) { source = ./wallpaper.jpg; };
 }

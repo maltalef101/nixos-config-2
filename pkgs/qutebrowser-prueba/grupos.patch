@@ -1,0 +1,121 @@
+diff --git a/qutebrowser/browser/commands.py b/qutebrowser/browser/commands.py
+index 287614903..debadedc1 100644
+--- a/qutebrowser/browser/commands.py
++++ b/qutebrowser/browser/commands.py
+@@ -2193,3 +2193,116 @@ class CommandDispatcher:
+                     new_url = self._parse_url(
+                         "qute://back/#" + cur_tab.title())
+                     cur_tab.load_url(new_url)
++
++    # nixos-config-2 (pkgs/qutebrowser-prueba): moving a tab into a
++    # group, jumping between groups and opening a tab at the end of the
++    # current group, like Sidebery's tab groups.
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('count', value=cmdutils.Value.count)
++    def tree_tab_reparent(self, index: Optional[int] = None,
++                          count: Optional[int] = None) -> None:
++        """Move the current tab, with its children, under another tab.
++
++        It becomes the last child of the tab given as argument/[count], so
++        `:tree-tab-reparent 4` moves it into the group whose tab is number 4.
++        A collapsed target is expanded, so the moved tab stays visible.
++
++        Args:
++            index: The target tab index, starting with 1.
++            count: The target tab index, starting with 1.
++        """
++        self._ensure_tree_tabs()
++        index = count if count is not None else index
++        if index is None:
++            raise cmdutils.CommandError("Give the number of the target tab!")
++        target = self._cntwidget(index)
++        if target is None:
++            raise cmdutils.CommandError(f"There's no tab {index}!")
++        tab = self._current_widget()
++        if tab.node in target.node.path:
++            raise cmdutils.CommandError("Can't move a tab under itself or "
++                                        "one of its children!")
++        if target.node.collapsed:
++            # Showing hidden tabs re-appends them to their parent, so expand
++            # before moving, or the moved tab would end up first.
++            target.node.collapsed = False
++            self._tabbed_browser.widget.tree_tab_update()
++        tab.node.parent = target.node
++        self._tabbed_browser.widget.tree_tab_update()
++        self._tabbed_browser.widget.setCurrentWidget(tab)
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       tree_tab=True)
++    @cmdutils.argument('direction', choices=['next', 'prev'])
++    def tree_tab_group_focus(self, direction: str = 'next') -> None:
++        """Focus the next or previous group.
++
++        A group is a top-level tab with children, or a page made by
++        `:tree-tab-create-group`. Cycles at the ends.
++
++        Args:
++            direction: `next` or `prev`.
++        """
++        self._ensure_tree_tabs()
++        top = self._current_widget().node.path[1]
++
++        def is_group(node):
++            url = node.value.url()
++            return bool(node.children) or (url.scheme() == 'qute' and
++                                           url.host() == 'treegroup')
++
++        nodes = [n for n in top.parent.children if n is top or is_group(n)]
++        if len(nodes) == 1:
++            raise cmdutils.CommandError("There's no other group!")
++        step = 1 if direction == 'next' else -1
++        target = nodes[(nodes.index(top) + step) % len(nodes)]
++        self._tabbed_browser.widget.setCurrentWidget(target.value)
++
++    @cmdutils.register(instance='command-dispatcher', scope='window',
++                       maxsplit=0, tree_tab=True)
++    @cmdutils.argument('url', completion=urlmodel.url)
++    def tree_tab_open_in_group(self, url: Optional[str] = None,
++                               bg: bool = False) -> None:
++        """Open a new tab at the end of the current tab's group.
++
++        The group is the nearest `qute://treegroup` tab above the current one
++        (or the current one itself), however deep the current tab is: the new
++        tab becomes its last direct child, not a child or a sibling of the
++        current tab. Outside of any group, it opens at the end of the top
++        level.
++
++        Args:
++            url: The URL to open, or the default page.
++            bg: Open in a new background tab.
++        """
++        self._ensure_tree_tabs()
++        widget = self._tabbed_browser.widget
++        current = self._current_widget()
++
++        def is_header(node):
++            url = node.value.url()
++            return url.scheme() == 'qute' and url.host() == 'treegroup'
++
++        parent = next((n for n in reversed(current.node.path[1:])
++                       if is_header(n)), widget.tree_root)
++        if parent.collapsed:
++            # Expand first, as in tree_tab_reparent: showing hidden tabs
++            # re-appends them, and the new tab would end up first.
++            parent.collapsed = False
++            widget.tree_tab_update()
++        if url is None:
++            urls = [config.val.url.default_page]
++        else:
++            urls = self._parse_url_input(url)
++        new_tabs = []
++        for i, cur_url in enumerate(urls):
++            urlutils.raise_cmdexc_if_invalid(cur_url)
++            tab = self._tabbed_browser.tabopen(
++                cur_url, background=bg or i > 0, related=False)
++            tab.node.parent = parent
++            widget.tree_tab_update()
++            new_tabs.append(tab)
++        if new_tabs:
++            widget.setCurrentWidget(current if bg else new_tabs[0])

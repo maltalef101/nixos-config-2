@@ -17,18 +17,11 @@ let
 		derivationArgs.passthru.providedSessions = [ "hyprland-login" ];
 	};
 in {
+	# El paquete es el default, pkgs.hyprland: el de nixpkgs con el parche de
+	# swallow (overlays/default.nix). Misma glibc y mismo mesa que el sistema.
 	programs.hyprland = {
 		enable = true;
 		xwayland.enable = true;
-		# parche: devolver el foco a la ventana des-tragada al cerrar el
-		# swallower. El candidato de foco lo elige el layout relativo a la
-		# ventana que cierra, y la restaurada es un target nuevo sin relación
-		# con esa posición -> ganaba la otra ventana del workspace. Upstream
-		# lo descartó (hyprwm/Hyprland#4296). Revisar el rebase al bumpear el
-		# input de hyprland.
-		package = inputs.hyprland.packages.${pkgs.system}.hyprland.overrideAttrs (old: {
-			patches = (old.patches or [ ]) ++ [ ./hyprland-unswallow-focus.patch ];
-		});
 	};
 
 	# mkForce: programs.hyprland mete además la sesión stock del paquete, que

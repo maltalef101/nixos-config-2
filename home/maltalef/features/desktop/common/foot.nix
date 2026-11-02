@@ -1,4 +1,7 @@
-{ ... }: {
+{ config, ... }:
+let
+	tema = config.tema;
+in {
 	programs.foot = {
 		enable = true;
 
@@ -29,9 +32,27 @@
 				blink = "yes";
 			};
 
-			# gruvbox dark (medium), portado literal de alacritty.toml; no sale de
-			# nix-colors porque el scheme global es -hard (fondo 1d2021, no 282828)
-			"colors-dark" = {
+			# con el tema (pirincho): la paleta de la terminal de la paleta tal
+			# cual (Color0..7 regular, Color8..15 bright), y su selección. Si no, gruvbox dark (medium), portado literal de
+			# alacritty.toml; no sale de nix-colors porque el scheme global es
+			# -hard (fondo 1d2021, no 282828)
+			"colors-dark" = if tema.enable then
+				with tema.terminal; {
+					background = Background;
+					foreground = Foreground;
+					cursor = "${Background} ${Cursor}";
+					selection-background = tema.colores.seleccion;
+					selection-foreground = tema.colores.texto;
+				}
+				// builtins.listToAttrs (builtins.genList (i: {
+					name = "regular${toString i}";
+					value = tema.terminal."Color${toString i}";
+				}) 8)
+				// builtins.listToAttrs (builtins.genList (i: {
+					name = "bright${toString i}";
+					value = tema.terminal."Color${toString (i + 8)}";
+				}) 8)
+			else {
 				background = "282828";
 				foreground = "ebdbb2";
 
@@ -70,4 +91,10 @@
 	# terminal que abre nautilus-open-any-terminal; sin la key usa su default
 	# (gnome-terminal), que no está instalado
 	dconf.settings."com/github/stunkymonkey/nautilus-open-any-terminal".terminal = "foot";
+
+	# Que la activación de home-manager (sd-switch) no reinicie el server:
+	# el reinicio lo mata y se lleva todas las ventanas (y lo que corra en
+	# ellas). El foot nuevo entra en la próxima sesión, o a mano con
+	# `systemctl --user restart foot` cuando no haya nada abierto.
+	systemd.user.services.foot.Unit.X-SwitchMethod = "keep-old";
 }

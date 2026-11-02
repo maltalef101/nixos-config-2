@@ -1,0 +1,56 @@
+/* La isla de los workspaces: números sobre el fondo de la isla, como las
+ * demás. La jerarquía la llevan los números: el activo en el texto claro y
+ * en negrita, los que tienen ventanas en el color del texto y los vacíos
+ * en texto tenue apagado. Debajo del activo, una raya corta y fina en el
+ * acento, centrada bajo el número (no de borde a borde del botón): con
+ * diez workspaces seguidos se nota cuál es sin pesar. */
+
+#workspaces button {
+	color: @foreground-color;
+	border-radius: 0;
+	min-width: 10px;
+	padding: 0 7px;
+	/* la raya, adentro de la isla y no sobre su borde */
+	margin: 3px 1px;
+	background-repeat: no-repeat;
+	background-position: center bottom;
+	background-size: 10px 2px;
+}
+
+#workspaces button:hover {
+	color: @foreground-color-alt;
+	background-image: image(alpha(@foco, 0.7));
+}
+
+#workspaces button.empty {
+	color: alpha(@texto-tenue, 0.6);
+}
+
+/* Sólo los ocupados y los que se ven: los diez de cada monitor existen
+ * siempre (los persistentes del plugin, que llevan los números al monitor
+ * que corresponde al enchufar uno), y waybar no tiene cómo no pintarlos.
+ * Los vacíos que no están en pantalla quedan en un botón sin relleno ni
+ * margen y con la etiqueta en cero (GTK lo deja de 1 px). waybar marca
+ * .empty también al activo vacío: ése se ve. */
+#workspaces button.empty:not(.active):not(.visible) {
+	min-width: 0;
+	padding: 0;
+	margin: 0;
+	background-image: none;
+}
+
+#workspaces button.empty:not(.active):not(.visible) label {
+	font-size: 0;
+}
+
+/* visible va antes que active: el botón con foco lleva las dos clases */
+#workspaces button.visible {
+	color: @foreground-color-alt;
+	background-image: image(alpha(@primary, 0.5));
+}
+
+#workspaces button.active {
+	color: @foreground-color-alt;
+	font-weight: 700;
+	background-image: image(@primary);
+}

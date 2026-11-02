@@ -6,6 +6,8 @@ in
   imports = [
     inputs.nix-colors.homeManagerModule
     ./features/cli
+    # el tema del escritorio (modules/tema): se prende por host
+    inputs.self.homeManagerModules.tema
   ];
 
   nix = {

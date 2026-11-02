@@ -21,7 +21,7 @@
     osv-detector
     packj
     pip-audit
-	safety-cli
+	# safety-cli # roto en nixpkgs actual: python3.14-safety marcado broken
     qbom
     search-vulns
     secrethound
@@ -29,7 +29,7 @@
     skjold
     tell-me-your-secrets
     trufflehog
-    whispers
+    # whispers # roto en nixpkgs actual: semgrep-core aborta en patchelf
     xeol
   ];
 }

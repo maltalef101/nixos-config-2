@@ -1,0 +1,27 @@
+/* extra.css: ajustes para el HTML que genera pandoc, encima de GithubDark.css */
+
+/* pandoc numera las líneas de código con anclas vacías: que no ocupen lugar */
+.sourceCode a[aria-hidden="true"] { display: none; }
+
+/* GitHub no muestra leyenda bajo las imágenes */
+figure { margin: 16px 0; }
+figcaption { display: none; }
+
+/* colores de resaltado de pandoc con la paleta .pl-* de GitHub dark */
+code.sourceCode .kw, code.sourceCode .cf { color: #ff7b72; }
+code.sourceCode .st, code.sourceCode .ss, code.sourceCode .vs, code.sourceCode .sc { color: #a5d6ff; }
+code.sourceCode .co, code.sourceCode .do, code.sourceCode .an, code.sourceCode .cv, code.sourceCode .in { color: #8b949e; }
+code.sourceCode .fu { color: #d2a8ff; }
+code.sourceCode .dv, code.sourceCode .fl, code.sourceCode .bn, code.sourceCode .cn, code.sourceCode .bu { color: #79c0ff; }
+code.sourceCode .va, code.sourceCode .dt, code.sourceCode .at, code.sourceCode .ot { color: #ffa657; }
+code.sourceCode .pp, code.sourceCode .ex { color: #7ee787; }
+code.sourceCode .er, code.sourceCode .al { color: #ff7b72; text-decoration: underline; }
+
+/* diagramas mermaid: salen de la columna de 980px (que este CSS deja pegada
+   a la izquierda, con 40px de padding) y usan el ancho de la ventana; si aun
+   así no entran, mermaid los escala (useMaxWidth) */
+.mermaid {
+  width: calc(100vw - 100px);
+  margin: 16px 0;
+}
+.mermaid svg { max-width: 100%; height: auto; }

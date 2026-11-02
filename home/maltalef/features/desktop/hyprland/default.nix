@@ -1,6 +1,10 @@
-{ pkgs, config, ... }: {
+{ pkgs, config, lib, ... }:
+let
+	tema = config.tema;
+in {
 	imports = [
 		../common
+		./animaciones.nix
 		./waybar
 		./fuzzel.nix
 		./hyprlock.nix
@@ -23,7 +27,10 @@
 		pkgs.hypr-cycle-monitor
 	];
 
-	home.pointerCursor = {
+	# cursor, tema GTK e íconos: con mkDefault, porque tema.aplicaciones
+	# (pirincho) pone los de la paleta (con gruvbox-verde, éstos, en la
+	# variante teal del tema); si no, estos
+	home.pointerCursor = lib.mkDefault {
 		package = pkgs.capitaine-cursors;
 		name = "capitaine-cursors";
 		size = 24;
@@ -31,14 +38,14 @@
 
 	gtk = {
 		enable = true;
-    gtk4.theme = config.gtk.theme;
+    gtk4.theme = lib.mkDefault config.gtk.theme;
 
-		theme = {
+		theme = lib.mkDefault {
 			package = pkgs.gruvbox-gtk-theme;
 			name = "Gruvbox-Dark";
 		};
 
-		iconTheme = {
+		iconTheme = lib.mkDefault {
 			package = pkgs.papirus-icon-theme;
 			name = "Papirus-Dark";
 		};
@@ -46,7 +53,7 @@
 
 	# el portal Settings (impl gtk) lee color-scheme de dconf; sin esto las apps
 	# portal-aware (Signal/Electron 43+) ven "no preference" y caen a light mode
-	dconf.settings."org/gnome/desktop/interface".color-scheme = "prefer-dark";
+	dconf.settings."org/gnome/desktop/interface".color-scheme = lib.mkDefault "prefer-dark";
 
 	wayland.windowManager.hyprland = {
 		enable = true;
@@ -105,8 +112,11 @@
 
 				layout = "master";
 				
-				"col.active_border" = "rgb(689d6a)";
-				"col.inactive_border" = "rgb(1d2021)";
+				# con el tema: el acento de la paleta en la ventana con foco
+				# y su borde inactivo en las demás (gruvbox-verde: 689d6a y
+				# 1d2021, como sin el tema)
+				"col.active_border" = "rgb(${if tema.enable then tema.colores.acento else "689d6a"})";
+				"col.inactive_border" = "rgb(${if tema.enable then tema.colores.bordeInactivo else "1d2021"})";
 			};
 
 			debug.disable_logs = false;
@@ -115,6 +125,10 @@
 				force_default_wallpaper = 0;
 				disable_hyprland_logo = true;
 				disable_splash_rendering = true;
+
+				# si hyprlock se cae con la sesión bloqueada (p. ej. al enchufar o sacar el monitor), se puede
+				# relanzar desde una TTY: hyprctl --instance 0 dispatch exec hyprlock
+				allow_session_lock_restore = true;
 
 				## i'd like this to not be enabled, but when spawning empty special
 				## workspaces that have a rule to execute something in them, it doesn't get
@@ -162,14 +176,7 @@
 				allow_workspace_cycles = true;
 			};
 
-			animation = [
-				"workspaces,1,2,default"
-				"specialWorkspace,1,2,default,slidevert"
-				"windows,1,2,default,slide"
-				"border,1,2,default"
-				"fade,1,2,default"
-				"layers,1,2,default"
-			];
+			# las animaciones, en ./animaciones.nix
 
 			decoration = {
 				rounding = 2;
@@ -250,6 +257,9 @@
 
 				"$mod Control_L, x, exec, hyprlock-lock"
 
+				# centro de notificaciones (swaync): conmutadores, volumen,
+				# brillo, lo que suena y las notificaciones
+				"$mod, n, exec, swaync-client -t -sw"
 				"Alt_L, Space, exec, swaync-client --close-latest"
 				"Alt_L SHIFT, Space, exec, swaync-client -C"
 				

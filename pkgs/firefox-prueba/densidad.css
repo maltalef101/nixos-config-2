@@ -1,0 +1,90 @@
+/* Más denso. Todo lo que da tamaño o posición va en píxeles CSS múltiplos de 4: caen en píxeles enteros a
+   escala 1.25 (el eDP-1, 4 px = 5) y a 1 (los monitores externos). Lo que trae firefox está en rem (los --space-*,
+   0.5rem = 7,33 px con la letra de 11 pt) o en múltiplos sueltos (2 px = 2,5 de pantalla), y deja casi todo el cromo
+   corrido una fracción de píxel, que WebRender remuestrea (lo que pasó con Sidebery). Los valores salen de medir el
+   cromo en la VM a 1.25 (capturas-firefox/t187). */
+
+:root {
+  /* la letra de la interfaz como la del resto del escritorio (waybar y foot: 13 px), en vez de los 11 pt (14,67 px)
+     del GTK */
+  font-size: 13px !important;
+
+  /* los espacios del sistema de diseño */
+  --space-xxsmall: 0px !important;
+  --space-xsmall: 4px !important;
+  --space-small: 4px !important;
+  --space-medium: 8px !important;
+  --space-large: 12px !important;
+  --space-xlarge: 16px !important;
+
+  /* las pestañas: 24 px de alto (en vertical, firefox no achica con la densidad compacta: max(32px, 1.7em)), sin
+     margen entre una y otra */
+  --tab-min-height: 24px !important;
+  --tab-margin-block: 0px !important;
+  --tab-margin-block-vertical: 0px !important;
+  --tab-margin-inline-inner: 4px !important;
+  --tab-padding-inline-vertical: 8px !important;
+  --tab-label-line-height: 1.5 !important;
+  --tab-icon-margin-inline-end: 8px !important;
+
+  /* la barra de arriba: la de direcciones de 24 px en una barra de 32, y los botones de 24 */
+  --urlbar-height: 24px !important;
+  --urlbar-padding-block: 4px !important;
+  --toolbarbutton-padding-inner: 4px !important;
+  --toolbarbutton-padding-outer: 0px !important;
+  --toolbar-padding-inline: 4px !important;
+
+  /* los menús de los paneles (el de la aplicación, el de las extensiones) */
+  --panel-menuitem-padding-block: 4px !important;
+  --panel-menuitem-padding-inline: 8px !important;
+  --panel-menuitem-margin-inline: 4px !important;
+}
+
+/* las pestañas verticales sin el relleno de arriba y abajo (3 px), una fila de 24 px pegada a la otra */
+#tabbrowser-tabs[orient="vertical"] .tabbrowser-tab {
+  padding-block: 0 !important;
+  margin-block: 0 !important;
+}
+
+/* las fijas: una grilla de celdas de 32 px (la columna de 240 px entra 7 por fila; firefox estira las columnas para
+   llenar el ancho, y las deja en fracciones de píxel) con el fondo de 24 en el medio */
+#pinned-tabs-container[orient="vertical"] {
+  --tab-height-with-margin-padding: 32px !important;
+  min-height: 32px !important;
+}
+
+#pinned-tabs-container[orient="vertical"]::part(items-wrapper) {
+  grid-template-columns: repeat(auto-fill, 32px) !important;
+  grid-auto-rows: 32px !important;
+  justify-content: start !important;
+}
+
+#pinned-tabs-container[orient="vertical"] .tabbrowser-tab {
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+}
+
+/* la barra de direcciones pegada al borde, a 4 px (firefox la deja a 5) */
+#urlbar-container {
+  padding-inline: 0 !important;
+  margin-inline: 4px 0 !important;
+}
+
+/* los menús contextuales y los de la barra de menú: la letra de 13 px y cada ítem de 24 px (4 + 16 + 4) */
+menupopup,
+panel {
+  --menuitem-padding-block: 4px !important;
+  --menuitem-padding-inline: 8px !important;
+  font-size: 13px !important;
+}
+
+menupopup :is(menuitem, menu) {
+  line-height: 16px !important;
+  min-height: 24px !important;
+}
+
+/* la letra de la barra de direcciones como la del resto (firefox la agranda a 1.05em) */
+#urlbar-input {
+  font-size: 13px !important;
+}

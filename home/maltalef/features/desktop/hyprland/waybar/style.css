@@ -1,14 +1,8 @@
-@define-color background-color #1d2021;
-@define-color foreground-color #ebdbb2;
-@define-color background-color-alt #282828;
-@define-color foreground-color-alt #fbf1c7;
-@define-color primary #689d6a;
-@define-color secondary #8ec07c;
-@define-color alert #cc241d;
-@define-color warning #fabd2f;
+/* Los colores (@background-color, @foreground-color, @foreground-color-alt,
+ * @primary, @on-primary, @alert, @warning) y la fuente los define
+ * default.nix antes de esta hoja: el tema o gruvbox. */
 
 * {
-	font-family: FiraCode Nerd Font;
 	font-size: 13px;
 	min-height: 0;
 }
@@ -34,13 +28,13 @@ window#waybar {
  * visible va antes: a igual especificidad gana la última regla. */
 #workspaces button.visible {
 	color: @foreground-color-alt;
-	/* verde apagado: @background-color-alt casi no contrasta con el fondo
-	 * de la barra (~1.1:1) */
+	/* el primario apagado: un gris de fondo apenas más claro casi no
+	 * contrasta con el fondo de la barra (~1.1:1) */
 	background-color: mix(@primary, @background-color, 0.45);
 }
 
 #workspaces button.active {
-	color: @background-color;
+	color: @on-primary;
 	background-color: @primary;
 }
 

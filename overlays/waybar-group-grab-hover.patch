@@ -1,0 +1,19 @@
+--- a/src/group.cpp
++++ b/src/group.cpp
+@@ -82,6 +82,16 @@
+   }
+
+   event_box_.add(box);
++
++  // A menu opened from a module of the group (a tray item's) takes a GTK grab, and the
++  // pointer's leave event goes to the menu: the group never sees it and stays in hover.
++  // Drop the hover when a grab shadows the group, as modules and tray items do (#3980).
++  // Drawers keep theirs: their hover also holds the revealer open.
++  event_box_.signal_grab_notify().connect([this](bool was_grabbed) {
++    if (!was_grabbed && !is_drawer) {
++      box.unset_state_flags(Gtk::StateFlags::STATE_FLAG_PRELIGHT);
++    }
++  });
+ }
+
+ void Group::show_group() {

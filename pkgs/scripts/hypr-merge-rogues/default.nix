@@ -7,7 +7,7 @@
   text = builtins.readFile ./hypr-merge-rogues;
 }) // {
   meta = with lib; {
-    description = "Merge rogue split-monitor-workspaces windows into the surviving monitor's set on monitor disconnect";
+    description = "Merge rogue split-monitor-workspaces windows into the surviving monitor's set on monitor disconnect, and send them back when that output reconnects";
     platforms = platforms.linux;
   };
 }

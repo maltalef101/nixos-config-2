@@ -1,4 +1,15 @@
-{ pkgs, ...}: {
+{ pkgs, config, ...}: {
+	# Al activar home-manager, recargar config y css en vez de reiniciar: el
+	# reinicio pierde el historial de notificaciones y el no molestar. Un
+	# swaync nuevo entra en la próxima sesión.
+	systemd.user.services.swaync = {
+		Unit.X-SwitchMethod = "reload";
+		Service.ExecReload = [
+			"${config.services.swaync.package}/bin/swaync-client --reload-config"
+			"${config.services.swaync.package}/bin/swaync-client --reload-css"
+		];
+	};
+
 	# notify-send: antes lo traía dunst.nix (retirado); swaync es ahora el
 	# único stack de notificaciones, así que provee él el cliente.
 	home.packages = [ pkgs.libnotify ];

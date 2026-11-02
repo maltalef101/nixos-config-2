@@ -10,10 +10,21 @@
 # configreloaded) se registra la base del rango de cada monitor a partir
 # del id mínimo presente en él; al caerse un monitor, es huérfano todo
 # workspace fuera del rango snapshoteado de su monitor actual.
+#
+# Y al revés: cada ventana mudada queda anotada con la salida de origen
+# (HDMI-A-1, DP-1, ...) y su posición; al reconectarse algo en esa misma
+# salida vuelve a su lugar (3 -> 13). La posición se guarda relativa al
+# rango porque la base del monitor puede cambiar al reconectarse (el
+# plugin asigna rangos por orden de mapeo).
 
 count=10 # tags por monitor, en sintonía con plugin:split-monitor-workspaces:count
 
 declare -A base=() # nombre de monitor -> base de su rango (0, 10, 20, ...)
+
+# address de ventana mudada por merge -> "salida posición workspace", donde
+# workspace es el id al que se la mudó. Vive en memoria: las addresses no
+# sobreviven a la sesión de hyprland, y este proceso tampoco.
+declare -A origin=()
 
 # base por monitor = piso del id mínimo presente. Solo es válido con el
 # mapeo sano (cada monitor tiene únicamente sus propios workspaces); dos
@@ -44,36 +55,91 @@ snapshot() {
 }
 
 merge() {
-	# esperar a que hyprland mueva los workspaces del monitor caído
-	sleep 0.5
-
-	local workspaces clients ws id monitor b target addr
+	# Sin esperar: hyprland manda monitorremoved al final de onDisconnect,
+	# con los workspaces del monitor caído ya mudados y los vacíos ya
+	# destruidos (el plugin les saca la persistencia en el mismo paso). Los
+	# que tienen ventanas quedan en la barra del que sigue hasta que se
+	# mudan sus ventanas, así que va todo en un jq y un solo hyprctl --batch.
+	local workspaces clients bases addr target slot from m cmds=""
 	workspaces=$(hyprctl workspaces -j)
 	clients=$(hyprctl clients -j)
+	bases=$(for m in "${!base[@]}"; do printf '%s\t%s\n' "$m" "${base[$m]}"; done |
+		jq -Rn '[inputs | split("\t") | {(.[0]): (.[1] | tonumber)}] | add // {}')
 
-	while read -r ws; do
-		id=$(jq -r '.id' <<<"$ws")
-		monitor=$(jq -r '.monitor' <<<"$ws")
-
-		b=${base[$monitor]-}
-		if [ -z "$b" ]; then
-			continue
+	# Por cada workspace fuera del rango snapshoteado de su monitor actual,
+	# sus ventanas van a la misma posición en ese rango (13 -> 3). El
+	# monitor de origen es el que tenía ese rango en el snapshot previo a
+	# la caída (todavía no se re-snapshoteó, así que sigue ahí aunque ya no
+	# exista; cubre varias caídas juntas, p. ej. sacar un dock).
+	#
+	# Sin las ventanas tragadas (hidden y apuntadas por el .swallowing de
+	# otra): movetoworkspace les crea un tile en el layout aunque sigan
+	# ocultas (hueco invisible al lado del swallower). Se mudan solas con su
+	# swallower. Una des-tragada con toggleswallow queda visible y sí pasa
+	# el filtro.
+	#
+	# El origen va último: vacío, read no corre los campos (el tab es
+	# blanco de IFS y los vacíos del medio se colapsan).
+	while IFS=$'\t' read -r addr target slot from; do
+		cmds+="dispatch movetoworkspacesilent $target,address:$addr;"
+		if [ -n "$from" ]; then
+			origin[$addr]="$from $slot $target"
 		fi
-		# dentro del rango del monitor -> no es huérfano
-		if [ "$id" -gt "$b" ] && [ "$id" -le $(( b + count )) ]; then
-			continue
-		fi
+	done < <(jq -r --argjson base "$bases" --argjson count "$count" --argjson clients "$clients" '
+		[$clients[].swallowing] as $swallowed |
+		.[] | select(.id > 0) | . as $ws |
+		$base[$ws.monitor] as $b | select($b != null) |
+		select(($ws.id > $b and $ws.id <= $b + $count) | not) |
+		(($ws.id - 1) % $count + 1) as $slot |
+		((($ws.id - 1) / $count | floor) * $count) as $rango |
+		([$base | to_entries[] | select(.value == $rango) | .key] | last // "") as $from |
+		$clients[] | select(.workspace.id == $ws.id) |
+		select((.hidden and (.address | IN($swallowed[]))) | not) |
+		[.address, $b + $slot, $slot, $from] | @tsv' <<<"$workspaces")
 
-		target=$(( b + (id - 1) % count + 1 ))
-
-		while read -r addr; do
-			hyprctl dispatch movetoworkspacesilent "$target,address:$addr" || true
-		done < <(jq -r --argjson ws "$id" \
-			'.[] | select(.workspace.id == $ws) | .address' <<<"$clients")
-	done < <(jq -c '.[] | select(.id > 0)' <<<"$workspaces")
+	if [ -n "$cmds" ]; then
+		hyprctl --batch "$cmds" >/dev/null || true
+	fi
 
 	# el mapeo quedó sano de nuevo; re-snapshotear para el próximo evento
 	snapshot
+}
+
+# devuelve a su monitor las ventanas que merge sacó de esa salida. Solo las
+# que siguen en el workspace donde las dejó merge: si se cerraron o se
+# movieron a mano entretanto, se respeta.
+restore() {
+	local name=$1 b clients addr from slot target current
+
+	# el plugin puede tardar en mapear el monitor nuevo; uno deshabilitado o
+	# espejado no se mapea nunca y simplemente no tiene base
+	for _ in 1 2 3 4 5; do
+		if [ -n "${base[$name]-}" ]; then
+			break
+		fi
+		sleep 0.5
+		snapshot
+	done
+	b=${base[$name]-}
+	if [ -z "$b" ]; then
+		return 0
+	fi
+
+	clients=$(hyprctl clients -j)
+	for addr in "${!origin[@]}"; do
+		read -r from slot target <<<"${origin[$addr]}"
+		if [ "$from" != "$name" ]; then
+			continue
+		fi
+		unset 'origin[$addr]'
+
+		current=$(jq -r --arg a "$addr" '
+			.[] | select(.address == $a) | .workspace.id' <<<"$clients")
+		if [ "$current" != "$target" ]; then
+			continue
+		fi
+		hyprctl dispatch movetoworkspacesilent "$(( b + slot )),address:$addr" || true
+	done
 }
 
 # pasada única a mano, p. ej. para limpiar un estado ya roto. Ojo: la base
@@ -94,8 +160,15 @@ socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
 socat -U - UNIX-CONNECT:"$socket" | while IFS= read -r event; do
 	case $event in
 		monitorremoved*) merge ;;
-		# el rango de un monitor puede cambiar al (re)mapearse
-		monitoradded* | configreloaded*)
+		# el rango de un monitor puede cambiar al (re)mapearse. Solo la
+		# variante v1 (monitoradded>>NOMBRE), que trae el nombre pelado;
+		# la v2 llega igual y repetiría el trabajo
+		monitoradded\>\>*)
+			sleep 0.5
+			snapshot
+			restore "${event#monitoradded>>}"
+			;;
+		configreloaded*)
 			sleep 0.5
 			snapshot
 			;;

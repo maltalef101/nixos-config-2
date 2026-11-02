@@ -16,6 +16,7 @@
     ../common/optional/networkmanager.nix
     ../common/optional/pipewire.nix
 	../common/optional/hyprland.nix
+	../common/optional/fprintd.nix
   ];
 
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_2;
@@ -52,6 +53,4 @@
   services.logind.settings.Login = {
 	  HandleLidSwitchExternalPower = "ignore";
   };
-
-  services.fprintd.enable = true;
 }

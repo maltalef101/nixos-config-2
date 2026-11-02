@@ -5,7 +5,7 @@
 {
   environment.systemPackages = with pkgs; [
     cfripper
-    checkov
+    # checkov # roto en nixpkgs actual: falla un test de bc-detect-secrets (unidiff)
     cirrusgo
     kdigger
     kube-hunter

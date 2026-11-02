@@ -1,13 +1,16 @@
 { outputs, lib, config, ... }:
 let 
   inherit (config.networking) hostName;
-  hosts = outputs.nixosConfigurations;
+  # sólo las que tienen clave de host: las variantes de VM (prueba-pirincho) no son máquinas de la flota
+  hosts = lib.filterAttrs (name: _: builtins.pathExists (pubKey name)) outputs.nixosConfigurations;
   pubKey = host: ../${host}/ssh_host_ed25519_key.pub;
 in {
   services.openssh = {
     enable = lib.mkDefault true;
     settings = {
       PasswordAuthentication = false;
+      # sin keyboard-interactive: con fprintd en PAM, un intento remoto leía el lector de huellas
+      KbdInteractiveAuthentication = false;
       PermitRootLogin = "no";
       StreamLocalBindUnlink = "yes";
 	  LogLevel = "INFO";
@@ -30,7 +33,8 @@ in {
       hosts;
   };
 
-  # Passwordless sudo when SSH'ing with keys
-  security.pam.sshAgentAuth.enable = true;
+  # la huella nunca aprueba un login remoto (fprintd la agrega a todas las pilas de PAM). Con el mkIf, una máquina sin
+  # sshd (pirincho) no gana un /etc/pam.d/sshd suelto
+  security.pam.services.sshd = lib.mkIf config.services.openssh.enable { fprintAuth = false; };
 }
   
