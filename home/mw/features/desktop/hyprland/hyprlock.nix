@@ -33,9 +33,12 @@
 				inner_color = "rgb(200, 200, 200)";
 				font_color = "rgb(10, 10, 10)";
 				#font_family = "Noto Sans";
-				fade_on_empty = true;
+				# El placeholder muestra lo que pregunta PAM ($PAMPROMPT): con varios
+				# prompts, es la única forma de ver el segundo. Sin fade_on_empty,
+				# para que el campo vacío no se desvanezca y se lleve el prompt.
+				fade_on_empty = false;
 				fade_timeout = 1000;
-				placeholder_text = "<i>Password...</i>";
+				placeholder_text = "<i>$PAMPROMPT</i>";
 				hide_input = false;
 				rounding = -1;
 				check_color = "rgb(204, 136, 34)";
