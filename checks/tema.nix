@@ -22,7 +22,7 @@
 #   antes de conectar, y sólo el foco encima. El de mw, sin layout.css.devPixelsPerPx.
 # - La waybar de maltalef en pirincho: sin el módulo de red, con el módulo VPN, el volumen y la batería en la isla del
 #   estado, los emojis, las métricas sin ancho fijo (cada isla mide lo que su texto) y con el número pegado al
-#   emoji, el calendario en el reloj, y sólo los workspaces ocupados y el activo.
+#   emoji, el calendario en el reloj (el año en 4 filas de 3 meses), y sólo los workspaces ocupados y el activo.
 # - Qt con cada paleta: una app Qt 6 y una Qt 5 (PyQt, offscreen), con el entorno de la sesión del home, cargan el
 #   plugin de qt6ct/qt5ct y les queda Fusion con la paleta.
 { pkgs, inputs, outputs }:
@@ -202,6 +202,8 @@ let
       "waybar: la campana no es el emoji"
     ++ lib.optional (mainbar."hyprland/window".max-length != 30) "waybar: el título no se acorta a 30"
     ++ lib.optional (!lib.hasInfix "{calendar}" (mainbar.clock.tooltip-format or "")) "waybar: el reloj no tiene el calendario"
+    ++ lib.optional ((mainbar.clock.calendar.mode-mon-col or null) != 3)
+      "waybar: el calendario del año no va en 4 filas de 3 meses (mode-mon-col = 3)"
     ++ lib.optional (!lib.hasInfix "@define-color warning #${temaG.colores.aviso};" barra.style
       || !lib.hasInfix "@define-color alert #${temaG.colores.alerta};" barra.style)
       "waybar: aviso y alerta no son los de gruvbox-verde"
