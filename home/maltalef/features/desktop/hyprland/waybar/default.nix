@@ -92,7 +92,10 @@ let
 		# el calendario del mes al pasar el puntero: el mes en el texto claro,
 		# los días de la semana en tenue, hoy en el acento. (Los fines de
 		# semana no: el calendario de waybar da formato por renglón, no por
-		# columna.)
+		# columna.) El clic pasa también al año, en 4 filas de 3 meses como
+		# `cal -y`: sin mode-mon-col, waybar apila los 12 meses en una sola
+		# columna (su default real es 1, no el 3 de la man page) y no entra
+		# en la pantalla. En el modo mes no cambia nada.
 		clock = {
 			timezone = "America/Argentina/Buenos_Aires";
 			format = "{:%d/%m  %H:%M}";
@@ -100,6 +103,7 @@ let
 			tooltip-format = "<tt>{calendar}</tt>";
 			calendar = with tema.colores; {
 				mode = "month";
+				mode-mon-col = 3;
 				format = {
 					months = "<span color='#${textoClaro}'><b>{}</b></span>";
 					weekdays = "<span color='#${textoTenue}'>{}</span>";
