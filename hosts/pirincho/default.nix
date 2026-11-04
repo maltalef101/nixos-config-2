@@ -75,6 +75,15 @@
     "kernel.panic" = 10;
   };
 
+  # Swap comprimida en RAM, de hasta 8 GiB (de 30): con Firefox y una VM la swap en disco (nix-swap, de 416 MiB) se
+  # llenaba. zstd (el de nixpkgs) comprime más que lz4 a cambio de algo de CPU, que acá sobra. Prioridad 5, por encima
+  # de nix-swap (-1, la que le da el kernel), que queda de reserva.
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+    memoryMax = 8 * 1024 * 1024 * 1024;
+  };
+
   services.flatpak.enable = true;
   programs.dconf.enable = true;
 
