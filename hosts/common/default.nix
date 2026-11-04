@@ -7,6 +7,7 @@
     ./nix.nix
     ./openssh.nix
     ./doas.nix
+    ./sensores.nix
   ];
 
   nixpkgs = {

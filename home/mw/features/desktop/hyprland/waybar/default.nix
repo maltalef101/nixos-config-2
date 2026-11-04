@@ -1,4 +1,8 @@
-{ pkgs, ... }: {
+{ pkgs, lib, osConfig ? { }, ... }:
+let
+	# la temperatura del CPU, del sensor que declara el host (hosts/common/sensores.nix); sin él, sin el módulo
+	sensorCpu = lib.attrByPath [ "sensores" "temperaturaCpu" ] null osConfig;
+in {
 	programs.waybar = {
 		enable = true;
 
@@ -26,7 +30,7 @@
 					"disk"
 					"memory"
 					"cpu"
-					"temperature"
+				] ++ lib.optional (sensorCpu != null) "temperature" ++ [
 					"battery"
 					"tray"
 				    "custom/notifications"
@@ -67,9 +71,10 @@
 					spacing = 10;
 				};
 
-				temperature = {
-					# NOTE: this is is platform dependent
-					thermal-zone = 6; 
+				temperature = lib.optionalAttrs (sensorCpu != null) {
+					hwmon-path-abs = sensorCpu.hwmon;
+					input-filename = sensorCpu.entrada;
+				} // {
 					format = "<span font='Noto Color Emoji'>🌡</span>{temperatureC}°C";
 					critical-threshold = 80;
 				};

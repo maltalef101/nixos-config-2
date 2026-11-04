@@ -50,6 +50,10 @@
     };
   };
 
+  # La temperatura del CPU en las waybar de maltalef y mw: k10temp (Tctl), en el puente 00:18.3. La única thermal
+  # zone es acpitz.
+  sensores.temperaturaCpu.hwmon = "/sys/devices/pci0000:00/0000:00:18.3/hwmon";
+
   boot.kernelPackages = pkgs.linuxKernel.packages.linux_7_2;
 
   # Cuelgues del 30/10: un Oops por un bit dado vuelta en el texto del kernel (0x0f leído como 0x0d), así que

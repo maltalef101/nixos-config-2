@@ -1,6 +1,15 @@
-{ pkgs, lib, config, ... }:
+{ pkgs, lib, config, osConfig ? { }, ... }:
 let
 	tema = config.tema;
+
+	# La temperatura del CPU, del sensor que declara el host (sensores.temperaturaCpu, hosts/common/sensores.nix). Sin
+	# él, la barra no tiene el módulo: thermal-zone = 0 suele ser acpitz, que no es el CPU.
+	sensorCpu = lib.attrByPath [ "sensores" "temperaturaCpu" ] null osConfig;
+	conTemperatura = lib.optional (sensorCpu != null) "temperature";
+	sensor = lib.optionalAttrs (sensorCpu != null) {
+		hwmon-path-abs = sensorCpu.hwmon;
+		input-filename = sensorCpu.entrada;
+	};
 
 	# Con el tema (pirincho): los colores con nombre de la paleta
 	# (gruvbox-verde: el aqua 689d6a) y su fuente de interfaz. Si no, gruvbox
@@ -72,7 +81,7 @@ let
 
 		"group/recursos" = {
 			orientation = "horizontal";
-			modules = [ "disk" "memory" "cpu" "temperature" ];
+			modules = [ "disk" "memory" "cpu" ] ++ conTemperatura;
 		};
 
 		"group/bandeja" = {
@@ -119,9 +128,7 @@ let
 			};
 		};
 
-		temperature = {
-			# NOTE: this is is platform dependent
-			thermal-zone = 6;
+		temperature = sensor // {
 			format = "${emoji "🌡"} {temperatureC}°C";
 			critical-threshold = 80;
 		};
@@ -250,7 +257,7 @@ in {
 					"disk"
 					"memory"
 					"cpu"
-					"temperature"
+				] ++ conTemperatura ++ [
 					"battery"
 					"tray"
 				    "custom/notifications"
@@ -284,9 +291,7 @@ in {
 					spacing = 10;
 				};
 
-				temperature = {
-					# NOTE: this is is platform dependent
-					thermal-zone = 6;
+				temperature = sensor // {
 					format = "<span font='Noto Color Emoji'>🌡</span>{temperatureC}°C";
 					critical-threshold = 80;
 				};

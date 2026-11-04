@@ -22,7 +22,7 @@
 #   antes de conectar, y sólo el foco encima. El de mw, sin layout.css.devPixelsPerPx.
 # - La waybar de maltalef en pirincho: sin el módulo de red, con el módulo VPN, el volumen y la batería en la isla del
 #   estado, los emojis, las métricas sin ancho fijo (cada isla mide lo que su texto) y con el número pegado al
-#   emoji, el calendario en el reloj (el año en 4 filas de 3 meses), y sólo los workspaces ocupados y el activo.
+#   emoji, la temperatura del k10temp (sensores.temperaturaCpu del host), el calendario en el reloj (el año en 4 filas de 3 meses), y sólo los workspaces ocupados y el activo.
 # - Qt con cada paleta: una app Qt 6 y una Qt 5 (PyQt, offscreen), con el entorno de la sesión del home, cargan el
 #   plugin de qt6ct/qt5ct y les queda Fusion con la paleta.
 { pkgs, inputs, outputs }:
@@ -198,6 +198,10 @@ let
     ++ lib.optional (!pegado mainbar.wireplumber.format-muted) "waybar: el volumen silenciado no es el emoji y el número pegado"
     ++ map (m: "waybar: ${m} tiene ancho fijo (min-length o align): las islas ocupan de más")
       (lib.filter (m: mainbar.${m} ? min-length || mainbar.${m} ? align) metricas)
+    ++ lib.optional (!lib.elem "temperature" mainbar."group/recursos".modules
+      || mainbar.temperature.hwmon-path-abs or null != "/sys/devices/pci0000:00/0000:00:18.3/hwmon"
+      || mainbar.temperature ? thermal-zone)
+      "waybar: la temperatura no es la del k10temp de pirincho (hwmon-path-abs, sin thermal-zone)"
     ++ lib.optional (!lib.hasPrefix "<span font='Noto Color Emoji'>" mainbar."custom/notifications".format)
       "waybar: la campana no es el emoji"
     ++ lib.optional (mainbar."hyprland/window".max-length != 30) "waybar: el título no se acorta a 30"

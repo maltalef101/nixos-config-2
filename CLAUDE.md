@@ -69,7 +69,8 @@ Besides `nixosConfigurations`, the flake exports `overlays`, `packages`, `checks
 ### Hosts
 
 Each host lives in `hosts/<hostname>/`. Hosts share common modules from `hosts/common/` (locale, mdns, nix, openssh,
-doas, users) and selectively import optional modules from `hosts/common/optional/` (bluetooth, hyprland, pipewire,
+doas, users, and `sensores.nix`: the `sensores.temperaturaCpu` option, the CPU's hwmon sensor that both users'
+waybars read through `osConfig`; without it they show no temperature) and selectively import optional modules from `hosts/common/optional/` (bluetooth, hyprland, pipewire,
 networkmanager, fprintd, gdm, impresion, keychron, etc.).
 
 | Hostname | Machine | State |
