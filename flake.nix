@@ -150,18 +150,11 @@
       });
 
       packages = forEachSystem (pkgs: import ./pkgs { inherit pkgs inputs; } // {
-        # Leen nixosConfigurations.pirincho, así que van acá y no en pkgs/default.nix (lo importa el overlay)
+        # Lee nixosConfigurations.pirincho, así que va acá y no en pkgs/default.nix (lo importa el overlay)
         firefox-prueba = import ./pkgs/firefox-prueba {
           maquina = self.nixosConfigurations.pirincho;
           addons = inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
         };
-        # el qutebrowser de prueba, con el tema de pirincho: nix run .#qutebrowser-prueba (pkgs/qutebrowser-prueba)
-        qutebrowser-prueba = pkgs.callPackage ./pkgs/qutebrowser-prueba (
-          let hm = self.nixosConfigurations.pirincho.config.home-manager.users.maltalef; in {
-            inherit (hm) tema;
-            # las direcciones de trabajo (el correo y el login), del perfil de maestro de pirincho
-            web = hm.chaska.maestro.web or null;
-          });
       });
       devShells = forEachSystem (pkgs: import ./shell.nix { inherit pkgs; });
 

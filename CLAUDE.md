@@ -31,14 +31,22 @@ Run the checks one by one. `nix flake check` reports two failures that predate e
 and `devShells` (`shell.nix` returns a `mkShell` derivation, not `{ default = …; }`, so `nix develop` doesn't work
 either; use `nix-shell`).
 
-### Test browsers and the trial VM
+### Test browser and the trial VM
 ```bash
 nix run .#firefox-prueba          # Firefox with native vertical tabs, Tridactyl, dense CSS (pkgs/firefox-prueba)
-nix run .#qutebrowser-prueba      # qutebrowser with tree tabs and tab groups (pkgs/qutebrowser-prueba)
 nixos-rebuild build-vm --flake .#prueba-pirincho
 ```
-Both browsers read `nixosConfigurations.pirincho` (its theme) and need no switch. The qutebrowser patches are rebased
-on qutebrowser 3.7.0: a newer nixpkgs qutebrowser will likely need them rebased.
+`firefox-prueba` reads `nixosConfigurations.pirincho` (its theme) and needs no switch.
+
+### qutebrowser
+maltalef's default browser on pirincho (links, `xdg-open`, `BROWSER`; Firefox stays installed, second in xdg-mime) is
+qutebrowser, from `home/maltalef/features/desktop/common/optional/qutebrowser`: `paquete.nix` (tree tabs and tab
+groups patches, `config.py` with the theme, the wrapper) and `default.nix` (the home-manager module). It uses the
+normal directories; `:set` changes go to `autoconfig.yml`, loaded last. The build measures the WCAG contrast of its
+colors (`contraste`). Before its first start, the wrapper runs `qutebrowser-desde-prueba`, which copies, once, what
+the old test qutebrowser left in `~/.local/share/qutebrowser-prueba` (it refuses while that one is running, and
+deletes nothing). The patches are rebased on qutebrowser 3.7.0: a newer nixpkgs qutebrowser will likely need them
+rebased.
 
 ### Comparing builds
 `hosts/common/nix.nix` puts every input, `self` included, in `nix.registry`, so pirincho's toplevel `drvPath`
@@ -98,7 +106,7 @@ added here: changes go to that repository.
 - To iterate on an uncommitted infra change:
   `--override-input infra 'git+file:///home/maltalef/documents/infra?dir=nixos'` (in zsh, as separate arguments,
   not inside a variable).
-- Only `pirincho`, `prueba-pirincho`, the test browsers and the checks need it. The other hosts evaluate without it:
+- Only `pirincho`, `prueba-pirincho`, the test browser and the checks need it. The other hosts evaluate without it:
   `hosts/common/nix.nix` lists `infra` in `nix.registry` only on hosts that import its modules.
 
 ### Home Manager
@@ -111,7 +119,7 @@ has:
 maltalef's features under `home/maltalef/features/`:
 - `cli/` — zsh, nvim, tmux, git, gpg, ssh, pass, starship, superfile; `optional/claude-swap.nix`
 - `desktop/common/` — foot, firefox (+ `firefox-tema.nix`), zathura, fonts, mimeapps, xdg; `optional/` (batsignal,
-  piper, network). birdtray, dragon, redshift, rofi and unclutter are X11 leftovers, not imported.
+  piper, network, qutebrowser). birdtray, dragon, redshift, rofi and unclutter are X11 leftovers, not imported.
 - `desktop/hyprland/` — Hyprland (with `animaciones.nix`), waybar (+ `vpn.nix`), fuzzel, hyprlock, hypridle,
   hyprsunset, hyprpaper, swaync, tessen, clipse, `laptop-scale.nix`
 - `emacs/`, `games/` (Steam), `tex/`
@@ -137,8 +145,8 @@ leftovers: nothing imports sops-nix. Never put secrets (keys, passwords, keytabs
 - `overlays/default.nix` — `additions` (everything in `pkgs/`) and `modifications`: Hyprland and waybar with local
   patches, the split-monitor-workspaces plugin, a test skip for sh4d0wup.
 - `pkgs/` — `scripts/` (hyprshot-*, hypr-*, hyprlock-lock, pass-otp-add, mdview, start-hyprland-login…),
-  `claude-swap` (built from the `claude-swap` input), and the test browsers `firefox-prueba` and `qutebrowser-prueba`
-  (exported as packages from `flake.nix`, not through the overlay, because they read pirincho).
+  `claude-swap` (built from the `claude-swap` input), and the test browser `firefox-prueba` (exported as a package
+  from `flake.nix`, not through the overlay, because it reads pirincho).
 
 ### Key Flake Inputs
 

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         prueba: YouTube sin publicidad (qutebrowser-prueba)
+// @name         YouTube sin publicidad (nixos-config-2)
 // @description  Saca la publicidad de las respuestas del reproductor y, si igual aparece una, la saltea.
 // @match        https://www.youtube.com/*
 // @match        https://m.youtube.com/*
@@ -19,13 +19,13 @@
 // 3. Esconde los recuadros de publicidad de la portada, la búsqueda y la columna (filtrado cosmético mínimo).
 //
 // Es código propio, sin bajar nada de afuera. Riesgo: YouTube cambia seguido las claves y las clases, y a
-// veces detecta el bloqueo («Los bloqueadores de anuncios infringen…»); si rompe la reproducción, se borra
-// data/greasemonkey/prueba-youtube-publicidad.user.js del basedir y :greasemonkey-reload.
+// veces detecta el bloqueo («Los bloqueadores de anuncios infringen…»); si rompe la reproducción, se saca de
+// home/maltalef/features/desktop/common/optional/qutebrowser/default.nix (en ~/.config/qutebrowser/greasemonkey).
 (function () {
   "use strict";
   const CLAVES = ["adPlacements", "playerAds", "adSlots", "adBreakHeartbeatParams"];
   // a la consola (qutebrowser la muestra con --debug --logfilter js)
-  const aviso = (texto) => console.info("prueba-yt " + location.host + ": " + texto);
+  const aviso = (texto) => console.info("youtube-publicidad " +location.host + ": " + texto);
 
   function podar(o) {
     if (!o || typeof o !== "object") return o;

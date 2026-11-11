@@ -7,7 +7,7 @@ index 287614903..debadedc1 100644
                          "qute://back/#" + cur_tab.title())
                      cur_tab.load_url(new_url)
 +
-+    # nixos-config-2 (pkgs/qutebrowser-prueba): moving a tab into a
++    # nixos-config-2 (maltalef's qutebrowser): moving a tab into a
 +    # group, jumping between groups and opening a tab at the end of the
 +    # current group, like Sidebery's tab groups.
 +

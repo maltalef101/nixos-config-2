@@ -20,6 +20,8 @@
 #   4 px, como todavía lo arma Firefox) y sin esquinas redondeadas, sombra ni contorno (la máscara), sin el botón del
 #   sidebar en la barra (y que Firefox todavía lo introduzca como hoy), la Browser Toolbox habilitada y preguntando
 #   antes de conectar, y sólo el foco encima. El de mw, sin layout.css.devPixelsPerPx.
+# - qutebrowser de maltalef en pirincho: el navegador por omisión (xdg-mime con Firefox detrás, BROWSER), el
+#   config.py del paquete con autoconfig.yml al final, el .desktop al envoltorio y el contraste de sus colores.
 # - La waybar de maltalef en pirincho: sin el módulo de red, con el módulo VPN, el volumen y la batería en la isla del
 #   estado, los emojis, las métricas sin ancho fijo (cada isla mide lo que su texto) y con el número pegado al
 #   emoji, la temperatura del k10temp (sensores.temperaturaCpu del host), el calendario en el reloj (el año en 4 filas de 3 meses), y sólo los workspaces ocupados y el activo.
@@ -260,6 +262,25 @@ let
     ++ lib.optional (pirincho.mw.programs.firefox.profiles.mw.settings ? "layout.css.devPixelsPerPx")
       "firefox: el perfil de mw tiene layout.css.devPixelsPerPx (se sacó a propósito)";
 
+  # qutebrowser de maltalef en pirincho: el navegador por omisión (primero en xdg-mime, con Firefox detrás, y en
+  # BROWSER), su config.py en ~/.config/qutebrowser con autoconfig.yml cargado al final (lo cambiado con :set le
+  # gana), y el .desktop que va al envoltorio. El contraste de sus colores se mide en el build (`contraste`).
+  qute = pirincho.maltalef;
+  qutebrowser = lib.findFirst (p: p ? contraste) null qute.home.packages;
+  escritorioQute = "org.qutebrowser.qutebrowser.desktop";
+  configQute = lib.splitString "\n" (lib.removeSuffix "\n" qutebrowser.configPy.text);
+  erroresQutebrowser =
+    if qutebrowser == null then [ "qutebrowser: no está en los paquetes del home" ] else
+    lib.optional ("${qute.xdg.configFile."qutebrowser/config.py".source}" != "${qutebrowser.configPy}")
+      "qutebrowser: ~/.config/qutebrowser/config.py no es el del paquete"
+    ++ lib.concatMap (t: let l = qute.xdg.mimeApps.defaultApplications.${t} or [ ]; in
+      lib.optional (lib.head (l ++ [ null ]) != escritorioQute) "qutebrowser: no es el primero para ${t}"
+      ++ lib.optional (!lib.elem "firefox.desktop" l) "qutebrowser: Firefox no quedó detrás para ${t}")
+      [ "text/html" "x-scheme-handler/http" "x-scheme-handler/https" ]
+    ++ lib.optional (qute.systemd.user.sessionVariables.BROWSER or null != "qutebrowser") "qutebrowser: BROWSER no es qutebrowser"
+    ++ lib.optional (lib.last configQute != "config.load_autoconfig(True)")
+      "qutebrowser: config.py no termina cargando autoconfig.yml (lo cambiado con :set tiene que ganar)";
+
   # Un GTK3 de verdad (en Xvfb) con el tema: carga sin errores, y da sus colores de fondo, texto y campo, y el
   # redondeo de los botones.
   pruebaGtk3 = pkgs.writeText "prueba-gtk3.py" ''
@@ -404,6 +425,8 @@ else if erroresFirefox != [ ] then throw ("tema: firefox de pirincho no quedó c
   + lib.concatStringsSep "\n- " erroresFirefox)
 else if erroresBarra != [ ] then throw ("tema: la waybar de maltalef en pirincho no quedó como se espera:\n- "
   + lib.concatStringsSep "\n- " erroresBarra)
+else if erroresQutebrowser != [ ] then throw ("tema: qutebrowser de maltalef en pirincho no quedó como se espera:\n- "
+  + lib.concatStringsSep "\n- " erroresQutebrowser)
 else pkgs.runCommand "tema" { nativeBuildInputs = [ pkgs.fontconfig pkgs.file pkgs.xvfb-run pkgs.unzip ]; } ''
   export HOME=$PWD/casa
   ${copiarConfs}
@@ -566,6 +589,11 @@ else pkgs.runCommand "tema" { nativeBuildInputs = [ pkgs.fontconfig pkgs.file pk
   unzip -p $omni chrome/devtools/modules/devtools/client/framework/browser-toolbox/Launcher.sys.mjs > lanzador.mjs 2>/dev/null || true
   grep -q 'getBoolPref("devtools.chrome.enabled")' lanzador.mjs && grep -q 'getBoolPref("devtools.debugger.remote-enabled")' lanzador.mjs \
     || { echo "FALLA: la Browser Toolbox de firefox ya no depende de devtools.chrome.enabled y devtools.debugger.remote-enabled"; falla=1; }
+
+  # qutebrowser: los colores pasaron la medición de contraste, y el .desktop (el de xdg-open) va al envoltorio
+  cat ${qutebrowser.contraste}
+  grep -qx 'Exec=${qutebrowser}/bin/qutebrowser --untrusted-args %u' ${qutebrowser}/share/applications/${escritorioQute} \
+    || { echo "FALLA: el .desktop de qutebrowser no lanza el envoltorio"; falla=1; }
 
   [ $falla = 0 ]
   echo "${temaG.esquema.slug}: ${toString (lib.attrValues temaG.esquema.palette)}" > $out

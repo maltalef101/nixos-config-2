@@ -1,14 +1,15 @@
-# Un qutebrowser de prueba, al lado de todo y sin switch:
-#   nix run ~/dev/nixos-config-2#qutebrowser-prueba
-# El qutebrowser de nixpkgs con su propio --basedir (~/.local/share/qutebrowser-prueba): config, datos, sesiones,
-# cookies y caché quedan ahí adentro, sin tocar ~/.config/qutebrowser ni otro qutebrowser abierto (cada basedir es
-# su propia instancia, con su propio socket). Borrarlo: ese directorio, y la salida del flake.
+# El qutebrowser de maltalef (lo instala default.nix, en el home): el de nixpkgs con los parches del árbol de
+# pestañas y los grupos, y un envoltorio `qutebrowser` adelante. Usa los directorios de siempre
+# (~/.config/qutebrowser, ~/.local/share/qutebrowser, ~/.cache/qutebrowser).
 #
-# - config.py: generado acá, con los colores y la fuente del tema. Es un enlace al store que se rehace en
-#   cada arranque; lo que Rulo cambie con :set queda en autoconfig.yml, que se carga al final y le gana.
+# - config.py: generado acá, con los colores y la fuente del tema (default.nix lo enlaza en ~/.config/qutebrowser);
+#   lo que Rulo cambie con :set queda en autoconfig.yml, que se carga al final y le gana.
 # - Las 5 fijadas: en el primer arranque (sin data/state ni sesión guardada) se instala la sesión `default` con las
 #   cinco pestañas `pinned` y se arranca con `-r default`. Después qutebrowser guarda y restaura la sesión solo
 #   (auto_save.session), así que no se duplican.
+# - Lo del qutebrowser de prueba (el que se corría con `nix run`, con todo en ~/.local/share/qutebrowser-prueba):
+#   antes del primer arranque, el envoltorio corre qutebrowser-desde-prueba, que copia sus sesiones, cookies, logins
+#   e historial y lo cambiado con :set, una sola vez y sin borrar nada (ver `desdePrueba`).
 # - El bloqueo de publicidad: python-adblock (adblock-rust de Brave) viene en el paquete de nixpkgs, con las listas
 #   de uBlock, EasyList, EasyPrivacy y EasyList Spanish. qutebrowser no las baja solo: el envoltorio le pasa
 #   `:adblock-update` en el primer arranque y cuando la caché tiene más de una semana. No hace filtrado cosmético
@@ -25,7 +26,8 @@
 #   hijas, o la página qute://treegroup/<nombre> de :tree-tab-create-group, y se colapsa con :tree-tab-toggle-hide.
 # `web`: las direcciones de trabajo (`correo`, `idp`), las de chaska.maestro.web del home de pirincho; null, sin el
 # correo ni el login con el ticket.
-{ lib, writeText, writeShellApplication, runCommand, python3, qutebrowser, coreutils, findutils, tema, web ? null }:
+{ lib, writeText, writeShellApplication, runCommand, symlinkJoin, python3, qutebrowser, coreutils, findutils
+, procps, util-linux, libnotify, tema, web ? null }:
 let
   c = tema.colores;
   dominioCorreo = lib.removePrefix "https://" web.correo;
@@ -50,7 +52,7 @@ let
 
   # La sesión inicial, con el formato de misc/sessions.py (en JSON, que también es YAML): `geometry: null` deja la
   # ventana por omisión, y `pinned` va en la entrada de la historia (así lo lee _load_tab).
-  sesion = writeText "qutebrowser-prueba-sesion.yml" (builtins.toJSON {
+  sesion = writeText "qutebrowser-sesion.yml" (builtins.toJSON {
     windows = [{
       active = true;
       geometry = null;
@@ -131,7 +133,7 @@ let
 
   # El contraste WCAG 2 de cada par (la luminancia relativa de sRGB), con la tabla en $out; falla si uno no llega
   # a 4,5:1 (AA para texto normal).
-  contraste = runCommand "qutebrowser-prueba-contraste" {
+  contraste = runCommand "qutebrowser-contraste" {
     pares = builtins.toJSON (map (p: { inherit (p) que texto fondo; }) pares);
     passAsFile = [ "pares" ];
   } ''
@@ -160,7 +162,7 @@ let
   '';
 
   configPy = writeText "config.py" ''
-    # Generado por nix (~/dev/nixos-config-2, pkgs/qutebrowser-prueba): se rehace en cada arranque.
+    # Generado por nix (~/dev/nixos-config-2, home/maltalef/features/desktop/common/optional/qutebrowser).
     # Los cambios con :set van a autoconfig.yml, que se carga al final y le gana a esto.
 
     # -- Pestañas a la izquierda, con íconos; xt las esconde (aparecen un momento al cambiar de pestaña) --
@@ -289,41 +291,145 @@ let
     # Lo que cambie Rulo con :set (autoconfig.yml), al final, así le gana a lo de arriba
     config.load_autoconfig(True)
   '';
+  # Lo del qutebrowser de prueba, una sola vez: data/ entero (sesiones, cookies y logins en webengine/, historial, el
+  # estado, la caché de las listas de bloqueo) y, de config/, lo que no es config.py (autoconfig.yml con lo cambiado
+  # con :set, los marcadores y las quickmarks). Lo que ya hubiera en los directorios de siempre (de un qutebrowser
+  # abierto alguna vez sin config) se aparta con el sufijo .antes-de-prueba, sin borrarlo, y el de prueba queda como
+  # está. La marca (.desde-prueba, en los datos) dice que ya se hizo, o que no había nada que copiar: con ella, el
+  # envoltorio no lo vuelve a llamar. Con el de prueba abierto no copia (las bases de Chromium quedarían a medias):
+  # avisa y sale con error.
+  desdePrueba = writeShellApplication {
+    name = "qutebrowser-desde-prueba";
+    runtimeInputs = [ coreutils findutils procps util-linux libnotify ];
+    text = ''
+      raiz="''${XDG_DATA_HOME:-$HOME/.local/share}"
+      datos="$raiz/qutebrowser"
+      conf="''${XDG_CONFIG_HOME:-$HOME/.config}/qutebrowser"
+      prueba="$raiz/qutebrowser-prueba"
+      marca="$datos/.desde-prueba"
+
+      # dos arranques a la vez no copian dos veces
+      exec 9> "''${XDG_RUNTIME_DIR:-/tmp}/qutebrowser-desde-prueba-$(id -u).lock"
+      flock 9
+      if [ -e "$marca" ]; then
+        echo "qutebrowser-desde-prueba: ya está hecho ($(cat "$marca"))"
+        exit 0
+      fi
+      if [ ! -d "$prueba/data" ]; then
+        mkdir -p "$datos"
+        echo "no había $prueba ($(date -Iseconds))" > "$marca"
+        exit 0
+      fi
+      if pgrep -u "$(id -u)" -f -- '--basedir [^ ]*/qutebrowser-prueba( |$)' > /dev/null; then
+        aviso="Cerrá el qutebrowser de prueba: la primera vez, qutebrowser copia sus sesiones, cookies e historial."
+        echo "qutebrowser-desde-prueba: $aviso" >&2
+        notify-send -a qutebrowser qutebrowser "$aviso" || true
+        exit 1
+      fi
+
+      apartar() {
+        if [ -e "$1" ] || [ -L "$1" ]; then
+          destino="$1.antes-de-prueba"
+          if [ -e "$destino" ] || [ -L "$destino" ]; then destino="$destino.$(date +%s)"; fi
+          mv "$1" "$destino"
+          echo "qutebrowser-desde-prueba: $1 quedó en $destino"
+        fi
+      }
+
+      # los datos, a un temporal al lado y de ahí a su lugar con un solo mv
+      tmp=$(mktemp -d "$raiz/.qutebrowser-desde-prueba.XXXXXX")
+      trap 'rm -rf "$tmp"' EXIT
+      cp -a "$prueba/data/." "$tmp/"
+      # sin los userscripts que la prueba enlazaba al store: el de YouTube lo pone default.nix en la config
+      if [ -d "$tmp/greasemonkey" ]; then
+        find "$tmp/greasemonkey" -maxdepth 1 -type l -lname '/nix/store/*' -delete
+      fi
+      apartar "$datos"
+      mv "$tmp" "$datos"
+      trap - EXIT
+
+      mkdir -p "$conf"
+      for f in autoconfig.yml bookmarks quickmarks; do
+        if [ -e "$prueba/config/$f" ]; then
+          apartar "$conf/$f"
+          cp -a "$prueba/config/$f" "$conf/$f"
+        fi
+      done
+      # los userscripts puestos a mano en la config de la prueba
+      if [ -d "$prueba/config/greasemonkey" ]; then
+        mkdir -p "$conf/greasemonkey"
+        find "$prueba/config/greasemonkey" -maxdepth 1 -type f -exec cp -a --update=none -t "$conf/greasemonkey" {} +
+      fi
+
+      echo "copiado de $prueba el $(date -Iseconds)" > "$marca"
+      echo "qutebrowser-desde-prueba: listo; $prueba quedó como estaba"
+    '';
+  };
+
+  envoltorio = writeShellApplication {
+    name = "qutebrowser";
+    runtimeInputs = [ coreutils findutils ];
+    text = ''
+      # los colores pasaron la medición de contraste: ${contraste}
+      datos="''${XDG_DATA_HOME:-$HOME/.local/share}/qutebrowser"
+      if [ ! -e "$datos/.desde-prueba" ]; then
+        ${lib.getExe desdePrueba}
+      fi
+      mkdir -p "$datos/sessions"
+
+      # El .desktop lanza `qutebrowser --untrusted-args %u`, y después de esa marca qutebrowser no acepta más que una
+      # URL, así que los comandos de abajo no podrían ir al final. La misma comprobación se hace acá (a lo sumo un
+      # argumento, que no sea una opción ni un comando) y la URL sigue sin la marca.
+      argumentos=()
+      while [ $# -gt 0 ]; do
+        if [ "$1" = --untrusted-args ]; then
+          if [ $# -gt 2 ] || [[ "''${2:-}" == [-:]* ]]; then
+            echo "qutebrowser: después de --untrusted-args va a lo sumo una URL, que no sea una opción ni un comando: ''${*:2}" >&2
+            exit 1
+          fi
+        else
+          argumentos+=("$1")
+        fi
+        shift
+      done
+
+      # las opciones van antes de los argumentos de Rulo, y los comandos después (argparse no junta posicionales
+      # separados por opciones)
+      opciones=()
+      comandos=()
+      # El primer arranque: la sesión con las cinco fijadas. Después la guarda y la restaura qutebrowser
+      # (state dice cuál, o _autosave si se cortó), así que no se vuelve a instalar ni se duplica: sin
+      # state ni _autosave, qutebrowser no restaura nada solo, y se carga una sola vez.
+      if [ ! -e "$datos/state" ] && [ ! -e "$datos/sessions/_autosave.yml" ]; then
+        [ -e "$datos/sessions/default.yml" ] || install -m 644 ${sesion} "$datos/sessions/default.yml"
+        opciones+=(-r default)
+      fi
+      # Las listas de bloqueo: qutebrowser no las baja solo
+      cache="$datos/adblock-cache.dat"
+      if [ ! -e "$cache" ] || [ -n "$(find "$cache" -mtime +7)" ]; then
+        comandos+=(":adblock-update")
+      fi
+      # Siempre un comando que no hace nada: si ya hay uno abierto y lo vuelven a lanzar sin URL ni comando,
+      # qutebrowser abre otra ventana con la página de inicio; con un comando, no (y al lado de una URL no molesta).
+      comandos+=(":nop")
+
+      # Qt en Wayland con la escala fraccionaria tal cual (wp_fractional_scale), sin redondear a entero
+      export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
+      export QT_QPA_PLATFORM="''${QT_QPA_PLATFORM:-wayland;xcb}"
+      exec ${qutebrowserArbol}/bin/qutebrowser "''${opciones[@]}" "''${argumentos[@]}" "''${comandos[@]}"
+    '';
+  };
 in
-writeShellApplication {
-  name = "qutebrowser-prueba";
-  runtimeInputs = [ coreutils findutils ];
-  text = ''
-    # los colores pasaron la medición de contraste: ${contraste}
-    base="''${XDG_DATA_HOME:-$HOME/.local/share}/qutebrowser-prueba"
-    mkdir -p "$base/config" "$base/data/greasemonkey" "$base/data/sessions"
-    ln -sfn ${configPy} "$base/config/config.py"
-    ln -sfn ${./youtube-publicidad.user.js} "$base/data/greasemonkey/prueba-youtube-publicidad.user.js"
-
-    # las opciones van antes de los argumentos de Rulo, y los comandos después (argparse no junta posicionales
-    # separados por opciones)
-    opciones=()
-    comandos=()
-    # El primer arranque: la sesión con las cinco fijadas. Después la guarda y la restaura qutebrowser
-    # (data/state dice cuál, o _autosave si se cortó), así que no se vuelve a instalar ni se duplica: sin
-    # data/state ni _autosave, qutebrowser no restaura nada solo, y se carga una sola vez.
-    if [ ! -e "$base/data/state" ] && [ ! -e "$base/data/sessions/_autosave.yml" ]; then
-      [ -e "$base/data/sessions/default.yml" ] || install -m 644 ${sesion} "$base/data/sessions/default.yml"
-      opciones+=(-r default)
-    fi
-    # Las listas de bloqueo: qutebrowser no las baja solo
-    cache="$base/data/adblock-cache.dat"
-    if [ ! -e "$cache" ] || [ -n "$(find "$cache" -mtime +7)" ]; then
-      comandos+=(":adblock-update")
-    fi
-    # Siempre un comando que no hace nada: si ya hay uno abierto y lo vuelven a lanzar sin URL ni comando,
-    # qutebrowser abre otra ventana con la página de inicio; con un comando, no (y al lado de una URL no molesta).
-    comandos+=(":nop")
-
-    # Qt en Wayland con la escala fraccionaria tal cual (wp_fractional_scale), sin redondear a entero
-    export QT_SCALE_FACTOR_ROUNDING_POLICY=PassThrough
-    export QT_QPA_PLATFORM="''${QT_QPA_PLATFORM:-wayland;xcb}"
-    exec ${qutebrowserArbol}/bin/qutebrowser --basedir "$base" "''${opciones[@]}" "$@" "''${comandos[@]}"
+symlinkJoin {
+  name = "qutebrowser-${qutebrowserArbol.version}";
+  # el envoltorio primero: su bin/qutebrowser le gana al del paquete
+  paths = [ envoltorio desdePrueba qutebrowserArbol ];
+  # el .desktop (el que usan xdg-open y el lanzador) va al envoltorio, no a lo que haya en el PATH
+  postBuild = ''
+    d=share/applications/org.qutebrowser.qutebrowser.desktop
+    rm $out/$d
+    sed "s|^Exec=qutebrowser|Exec=$out/bin/qutebrowser|" ${qutebrowserArbol}/$d > $out/$d
   '';
-  passthru = { inherit configPy sesion contraste qutebrowserArbol; };
+  meta.mainProgram = "qutebrowser";
+  passthru = { inherit configPy sesion contraste qutebrowserArbol desdePrueba; };
 }

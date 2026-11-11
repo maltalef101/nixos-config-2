@@ -6,6 +6,8 @@
     ./features/desktop/common/optional/batsignal.nix
     ./features/desktop/common/optional/piper.nix
     ./features/desktop/common/optional/network.nix
+    # el navegador por omisión (Firefox sigue, detrás)
+    ./features/desktop/common/optional/qutebrowser
     ./features/cli/optional/claude-swap.nix
     ./features/emacs
     ./features/games

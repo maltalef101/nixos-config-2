@@ -24,7 +24,8 @@ in
 	    PAGER = "less";
       EDITOR = "nvim";
       VISUAL = "nvim";
-      BROWSER = "firefox";
+      # en pirincho, qutebrowser (features/desktop/common/optional/qutebrowser)
+      BROWSER = lib.mkDefault "firefox";
 	  };
   };
   

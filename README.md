@@ -36,7 +36,7 @@ nixos-rebuild build-vm --flake .#prueba-pirincho
 ## The `infra` input
 
 `pirincho` takes its work profile from the `infra` input, a private flake pinned by rev (`git+file:`, not fetchable
-from a clone). Only `pirincho`, `prueba-pirincho`, the test browsers (`firefox-prueba`, `qutebrowser-prueba`) and the
+from a clone). Only `pirincho`, `prueba-pirincho`, the test browser (`firefox-prueba`) and the
 checks need it: the other hosts evaluate without it (`nix.registry` lists `infra` only on hosts that import its
 modules).
 
