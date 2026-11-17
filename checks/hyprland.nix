@@ -5,7 +5,8 @@
 # Hyprland salía de un input con otra glibc. Comprueba que arranca sin errores del cargador de mesa, que el
 # plugin split-monitor-workspaces carga y que sus dispatchers son válidos. Y la configuración de maltalef en pirincho:
 # el hyprland.conf pasa --verify-config (curvas, animaciones con su estilo, reglas de capas), y hyprlock bloquea con
-# su hyprlock.conf sin errores de configuración.
+# su hyprlock.conf sin errores de configuración. Con hyprlock arriba y la pantalla apagada (dpms off), una tecla o el mouse
+# la prenden, con los misc:key_press_enables_dpms y mouse_move_enables_dpms de maltalef.
 { pkgs, outputs, ... }:
 let
   pirincho = outputs.nixosConfigurations.pirincho;
@@ -14,6 +15,7 @@ let
   confMaltalef = hm.xdg.configFile."hypr/hyprland.conf".source;
   confHyprlock = hm.xdg.configFile."hypr/hyprlock.conf".source;
   hyprlock = hm.programs.hyprlock.package;
+  misc = hm.wayland.windowManager.hyprland.settings.misc;
   confConErrores = pkgs.writeText "con-errores.conf" ''
     animation = windowsIn, 1, 2, default, popon
     layerrule = no_animx on, match:namespace ^(x)$
@@ -30,6 +32,8 @@ let
     }
     misc {
       disable_hyprland_logo = true
+      key_press_enables_dpms = ${pkgs.lib.boolToString misc.key_press_enables_dpms}
+      mouse_move_enables_dpms = ${pkgs.lib.boolToString misc.mouse_move_enables_dpms}
     }
   '';
 
@@ -64,6 +68,8 @@ pkgs.testers.runNixOSTest {
     virtualisation.memorySize = 2048;
 
     security.pam.services.hyprlock = { };
+    # un mouse de verdad para Hyprland (uinput, por libinput): el mouse_move de QEMU no le llega
+    programs.ydotool.enable = true;
     environment.systemPackages = [ pkgs.foot pkgs.jq ];
   };
 
@@ -175,5 +181,38 @@ pkgs.testers.runNixOSTest {
         registro = machine.succeed("cat /tmp/hyprlock.log")
         assert "Config has errors" not in registro, registro
         assert "does not exist" not in registro, registro
+
+    # Con los misc:*_enables_dpms de maltalef, Hyprland prende la pantalla con una tecla o el mouse por su cuenta, sin el
+    # on-resume de hypridle (que se pierde si un inhibit vuelve a 0 estando idle). Con hyprlock arriba, como en pirincho.
+    def dpms():
+        return machine.succeed("${hyprctl} monitors -j | jq -r '.[0].dpmsStatus'").strip()
+
+    def apagar():
+        machine.succeed("${hyprctl} dispatch dpms off")
+        esperar(dpms, "false", 10)
+
+    def tecla():
+        machine.send_key("shift")
+
+    def mouse():
+        machine.succeed("YDOTOOL_SOCKET=/run/ydotoold/socket ydotool mousemove -x 20 -y 20")
+
+    with subtest("con hyprlock arriba, una tecla o el mouse prenden la pantalla"):
+        machine.wait_for_unit("ydotoold.service")
+        # con el valor del hyprland.conf de maltalef
+        for entrada in [tecla, mouse]:
+            apagar()
+            entrada()
+            esperar(dpms, "true", 10)
+
+        # control: sin la opción, no la prenden
+        for opcion, entrada in [("key_press_enables_dpms", tecla), ("mouse_move_enables_dpms", mouse)]:
+            machine.succeed(f"${hyprctl} keyword misc:{opcion} false")
+            apagar()
+            entrada()
+            machine.sleep(2)
+            assert dpms() == "false", opcion
+            machine.succeed(f"${hyprctl} keyword misc:{opcion} true")
+            machine.succeed("${hyprctl} dispatch dpms on")
   '';
 }
