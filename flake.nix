@@ -61,7 +61,7 @@
 		# `git -C ~/documents/infra rev-parse origin/main` y `nix flake lock`.
 		# Para iterar sobre un cambio de infra sin commitear:
 		# --override-input infra 'git+file:///home/maltalef/documents/infra?dir=nixos'
-		url = "git+file:///home/maltalef/documents/infra?dir=nixos&ref=main&rev=d6cef5bb3ec40fde29dbdf48376190c3f1b38629";
+		url = "git+file:///home/maltalef/documents/infra?dir=nixos&ref=main&rev=a5218f97a39dd18e608e93cd24f3e4ade4669bec";
 		inputs.nixpkgs.follows = "nixpkgs";
 		inputs.home-manager.follows = "home-manager";
 	};

@@ -311,18 +311,18 @@
       },
       "locked": {
         "dir": "nixos",
-        "lastModified": 1793635350,
-        "narHash": "sha256-UkAM1KQaAVd/0ZxY6rXuB0JR3kmgH1xlmQt1jcsHwEM=",
+        "lastModified": 1794690712,
+        "narHash": "sha256-gaNpk2P3Lfeb735Xc6zXdiOrMyK64yHt4D3n34Q336I=",
         "ref": "main",
-        "rev": "d6cef5bb3ec40fde29dbdf48376190c3f1b38629",
-        "revCount": 3328,
+        "rev": "a5218f97a39dd18e608e93cd24f3e4ade4669bec",
+        "revCount": 5013,
         "type": "git",
         "url": "file:///home/maltalef/documents/infra"
       },
       "original": {
         "dir": "nixos",
         "ref": "main",
-        "rev": "d6cef5bb3ec40fde29dbdf48376190c3f1b38629",
+        "rev": "a5218f97a39dd18e608e93cd24f3e4ade4669bec",
         "type": "git",
         "url": "file:///home/maltalef/documents/infra"
       }
