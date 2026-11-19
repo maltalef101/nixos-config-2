@@ -30,9 +30,13 @@
 				{ name = "tpps/2-elan-trackpoint"; accel_profile = "flat"; }
 			];
 
+			# la Wacom (Intuos CTL-6100WL) entera sobre el monitor de arriba
+			input.tablet.output = "DP-1";
+
 			monitor = [
 				"eDP-1, 1920x1080, 0x0, 1"
-				"HDMI-A-1, 1920x1080@100, 0x-1080, 1"
+				# espejo del DP-1 (eDP queda a la izquierda del DP-1)
+				"HDMI-A-1, 1920x1080@100, auto, 1, mirror, DP-1"
 				"DP-1, 1920x1080@180, 0x-1080, 1"
 				# x=1536: ancho lógico del eDP a 1.25 (hypr-laptop-scale)
 				"DP-2, 1920x1080, 1536x0, 1"
