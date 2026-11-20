@@ -15,9 +15,8 @@
 # - El fondo: `fondo.imagen`, el que ponen hyprpaper y hyprlock. Con gruvbox-verde, el que ponga el usuario.
 # - `tema.aplicaciones`: GTK 3/4, Qt, cursor e íconos (se prende con el tema). Con gruvbox-verde, los de antes del
 #   tema (Gruvbox, Papirus-Dark, capitaine-cursors), con las carpetas de Papirus en verde. Qt, con la paleta.
-# - `tema.nvim`: un colorscheme de nvim con el nombre de la paleta (nvim.nix), para que la configuración de nvim lo
-#   elija.
-# Las herramientas del escritorio (barra, lanzador, terminal…) no se tocan acá: cada una lee estos valores.
+# Las herramientas del escritorio (barra, lanzador, terminal…) no se tocan acá: cada una lee estos valores. nvim no
+# lee el tema: usa gruvbox.nvim tal cual, sobre el fondo de la terminal.
 { config, lib, pkgs, options, ... }:
 let
   inherit (lib) mkEnableOption mkIf mkMerge mkOption optionalAttrs types literalExpression;
@@ -132,12 +131,6 @@ in
       La paleta de la terminal (Background, Foreground, Cursor, Color0..Color15): con gruvbox-verde, la gruvbox dark
       de foot antes del tema.
     '' paleta.terminal "tema.paletas.<paleta>.terminal";
-
-    nvim = soloLectura ''
-      El colorscheme de nvim de la paleta (nvim.nix), con su nombre: un paquete con colors/<paleta>.lua
-      (colors/gruvbox-verde.lua), para programs.neovim.plugins o para enlazar en ~/.config/nvim/colors. No se aplica
-      solo: la configuración de nvim elige el colorscheme (`tema.paleta`).
-    '' (import ./nvim.nix { inherit lib pkgs; tema = cfg; }) "<paleta>-nvim";
 
     fuentes = {
       paquete = soloLectura "Las fuentes que trae la paleta, que se instalan con el tema (null: ninguna)."

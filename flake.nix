@@ -137,7 +137,7 @@
       inherit lib;
       overlays = import ./overlays { inherit inputs outputs; };
 
-      # El tema del escritorio (`tema`, con gruvbox-verde y nvim; modules/tema). home/maltalef/global.nix lo importa.
+      # El tema del escritorio (`tema`, con gruvbox-verde; modules/tema). home/maltalef/global.nix lo importa.
       homeManagerModules.tema = {
         imports = [ ./modules/tema ];
         # el base16 de la paleta gruvbox-verde

@@ -57,4 +57,9 @@ for k, v in pairs(options) do
 	vim.opt[k] = v
 end
 
-vim.cmd('source ~/.config/nvim/gruvbox.vim')
+-- gruvbox.nvim (programs.neovim.plugins), as is: hard contrast, the terminal's background
+require('gruvbox').setup({
+	contrast = 'hard',
+	transparent_mode = true,
+})
+vim.cmd.colorscheme('gruvbox')

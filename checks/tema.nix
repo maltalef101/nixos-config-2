@@ -7,8 +7,9 @@
 #   sin tocar, sin instalar fuentes) y el fondo, el wallpaper.jpg de pirincho.
 #   Las aplicaciones, las de antes del tema: Gruvbox (variante teal, la del acento verde) que carga en GTK3 sin quejas
 #   y GTK4 importándolo, Papirus-Dark con las carpetas verdes (también las de maltalef en pirincho; las de mw, azules),
-#   capitaine-cursors, acento green en dconf, la paleta Qt con el acento; nvim con el colorscheme gruvbox-verde sobre
-#   el fondo de foot (sin errores y sin dejar grupos con los del colorscheme por omisión).
+#   capitaine-cursors, acento green en dconf, la paleta Qt con el acento.
+# - nvim de maltalef y de mw en pirincho: gruvbox.nvim tal cual, sin errores, con el contraste hard y sin fondo (el de
+#   la terminal).
 # - Una paleta de otro módulo (`tema.paletas.prueba`, con sus fuentes y su fondo, como las que suma el input infra):
 #   se elige por nombre, instala sus fuentes, pone la sans (fc-match sans-serif la da con la configuración de
 #   fontconfig del home), GTK, Qt y dconf con ella, y su fondo por omisión.
@@ -297,34 +298,20 @@ let
     print("campo", hexa(campo.get_style_context().get_property("background-color", N)))
     print("redondeo", boton.get_style_context().get_property("border-radius", N))
   '';
-  # nvim con el colorscheme de la paleta (tema.nvim): carga sin errores, y ningún grupo queda con un color del
-  # colorscheme por omisión de nvim (sus grises NvimDark*/NvimLight*), salvo los de depuración del redibujo. Escribe
-  # <paleta>.txt.
-  pruebaNvim = nombre: pkgs.writeText "prueba-nvim-${nombre}.lua" ''
-    local function colores(h) return { h.fg, h.bg, h.sp } end
-    -- los de depuración (y lo que se enlaza a ellos) quedan como en nvim
-    local function depuracion(n) return n:match('^RedrawDebug') or n == 'NvimInternalError' end
-    local omision = {}
-    for n, h in pairs(vim.api.nvim_get_hl(0, {})) do
-      if not h.link and not depuracion(n) then
-        for _, c in pairs(colores(h)) do omision[c] = true end
-      end
-    end
-    vim.cmd.colorscheme('${nombre}')
-    local salida = { 'nombre ' .. vim.g.colors_name, 'terminal1 ' .. vim.g.terminal_color_1:sub(2) }
-    for n in pairs(vim.api.nvim_get_hl(0, {})) do
-      for _, c in pairs(colores(vim.api.nvim_get_hl(0, { name = n, link = false }))) do
-        if omision[c] and not depuracion(n) then salida[#salida + 1] = string.format('fuga %s %06x', n, c) end
-      end
-    end
+  # nvim de un usuario de pirincho, después de su init.lua: el colorscheme, gruvbox.nvim con su configuración, algunos
+  # grupos (fg y bg, «-» sin color), el último error y los mensajes. Escribe $SALIDA.
+  pruebaNvim = pkgs.writeText "prueba-nvim.lua" ''
     local function hexa(c) return c and string.format('%06x', c) or '-' end
-    for _, n in ipairs({ 'Normal', 'Visual', 'PmenuSel', 'StatusLine', 'CursorLine', 'Comment', 'DiagnosticError',
-                         'DiagnosticWarn', 'DiagnosticInfo', '@keyword', '@string' }) do
+    local gruvbox = require('gruvbox').config
+    local salida = { 'nombre ' .. tostring(vim.g.colors_name), 'fondo ' .. vim.o.background,
+                     'contraste ' .. gruvbox.contrast, 'transparente ' .. tostring(gruvbox.transparent_mode) }
+    for _, n in ipairs({ 'Normal', 'NormalFloat', 'Search', 'Comment' }) do
       local h = vim.api.nvim_get_hl(0, { name = n, link = false })
       salida[#salida + 1] = n .. ' ' .. hexa(h.fg) .. ' ' .. hexa(h.bg)
     end
     salida[#salida + 1] = 'errmsg ' .. vim.v.errmsg
-    vim.fn.writefile(salida, '${nombre}.txt')
+    salida[#salida + 1] = 'mensajes ' .. vim.fn.execute('messages'):gsub('\n', ' | ')
+    vim.fn.writefile(salida, vim.env.SALIDA)
   '';
 
   # El contraste WCAG del cuerpo de las notificaciones contra la tarjeta (la superficie con --noti-bg-alpha), sobre un
@@ -502,23 +489,21 @@ else pkgs.runCommand "tema" { nativeBuildInputs = [ pkgs.fontconfig pkgs.file pk
     { a = "systemctl poweroff"; confirma = "si"; }
   ]}
 
-  # nvim con el colorscheme de la paleta: sus colores en la interfaz, la sintaxis y los diagnósticos
-  nvim() {
-    ${pkgs.neovim-unwrapped}/bin/nvim --clean --headless --cmd "set rtp^=$1" -c "luafile $2" -c 'qa!'
-    cat $3.txt
-    if grep '^fuga ' $3.txt; then echo "FALLA: nvim con $3 deja grupos con colores del esquema por omisión"; falla=1; fi
-  }
-  # gruvbox-verde: el fondo de foot (bg0 #282828) y la interfaz un escalón arriba, la sintaxis de gruvbox-dark-hard
-  nvim ${temaG.nvim} ${pruebaNvim "gruvbox-verde"} gruvbox-verde
-  ${with esperadoG.colores; let p = temaG.esquema.palette; in lib.concatMapStrings (l: ''
-    grep -qx '${l}' gruvbox-verde.txt || { echo "FALLA: nvim con gruvbox-verde no da «${l}»"; falla=1; }
-  '') [
-    "nombre gruvbox-verde" "terminal1 ${esperadoG.terminal.Color1}" "errmsg "
-    "Normal ${texto} ${esperadoG.terminal.Background}" "Visual - ${seleccion}" "PmenuSel ${sobreAcento} ${acento}"
-    "StatusLine ${texto} ${campo}" "CursorLine - ${campo}" "Comment ${apagado} -"
-    "DiagnosticError ${p.base08} -" "DiagnosticWarn ${p.base0A} -"
-    "DiagnosticInfo ${foco} -" "@keyword ${p.base0E} -" "@string ${p.base0B} -"
-  ]}
+  # nvim de maltalef y de mw en pirincho, el de su home (su paquete, ~/.config y ~/.local/share): gruvbox.nvim tal
+  # cual, sin errores, con el contraste hard (el bg0 de Search es dark0_hard, #1d2021) y sin fondo (el de la terminal)
+  ${lib.concatMapStrings (u: let h = pirincho.${u}; in ''
+    mkdir -p nvim-${u}
+    SALIDA=$PWD/nvim-${u}.txt HOME=$PWD/nvim-${u} XDG_CONFIG_HOME=${h.home-files}/.config \
+      XDG_DATA_HOME=${h.home-files}/.local/share XDG_CACHE_HOME=$PWD/nvim-${u}/cache XDG_STATE_HOME=$PWD/nvim-${u}/state \
+      ${h.programs.neovim.finalPackage}/bin/nvim --headless -c 'luafile ${pruebaNvim}' -c 'qa!'
+    echo "nvim de ${u}:"; cat nvim-${u}.txt
+    ${lib.concatMapStrings (l: ''
+      grep -qx '${l}' nvim-${u}.txt || { echo "FALLA: nvim de ${u} no da «${l}»"; falla=1; }
+    '') [
+      "nombre gruvbox" "fondo dark" "contraste hard" "transparente true" "errmsg " "mensajes "
+      "Normal ebdbb2 -" "NormalFloat ebdbb2 -" "Search fabd2f 1d2021"
+    ]}
+  '') [ "maltalef" "mw" ]}
 
   # la paleta de qt5ct/qt6ct: los 22 roles en cada grupo, con el acento como Highlight (el 13)
   qt() {
