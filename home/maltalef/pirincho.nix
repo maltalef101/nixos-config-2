@@ -35,8 +35,9 @@
 
 			monitor = [
 				"eDP-1, 1920x1080, 0x0, 1"
-				# espejo del DP-1 (eDP queda a la izquierda del DP-1)
-				"HDMI-A-1, 1920x1080@100, auto, 1, mirror, DP-1"
+				# centrado encima del eDP (x=-192: (1536-1920)/2, eDP a 1.25); si el
+				# DP-1 está enchufado lo espeja y la posición no cuenta
+				"HDMI-A-1, 1920x1080@100, -192x-1080, 1, mirror, DP-1"
 				"DP-1, 1920x1080@180, 0x-1080, 1"
 				# x=1536: ancho lógico del eDP a 1.25 (hypr-laptop-scale)
 				"DP-2, 1920x1080, 1536x0, 1"
