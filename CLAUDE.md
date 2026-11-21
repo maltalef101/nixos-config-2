@@ -121,7 +121,9 @@ maltalef's features under `home/maltalef/features/`:
 - `desktop/common/` — foot, firefox (+ `firefox-tema.nix`), zathura, fonts, mimeapps, xdg; `optional/` (batsignal,
   piper, network, qutebrowser). birdtray, dragon, redshift, rofi and unclutter are X11 leftovers, not imported.
 - `desktop/hyprland/` — Hyprland (with `animaciones.nix`), waybar (+ `vpn.nix`), fuzzel, hyprlock, hypridle,
-  hyprsunset, hyprpaper, swaync, tessen, clipse, `laptop-scale.nix`
+  hyprsunset, hyprpaper, swaync, tessen, clipse, `pantallas.nix` (per-station monitor layout and the eDP scale: a
+  fuzzel menu on F7/`$mod+o` and a hotplug watcher, `pkgs/scripts/hypr-pantallas`; per-monitor defaults in
+  `pantallas.monitores`, menu choices in `~/.local/state/hypr-pantallas`)
 - `emacs/`, `games/` (Steam), `tex/`
 
 `home/mw/` has its own, older tree (alacritty, wofi, its own waybar and swaync).

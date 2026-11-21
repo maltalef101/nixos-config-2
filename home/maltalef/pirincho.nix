@@ -2,7 +2,7 @@
   imports = [
     ./global.nix
     ./features/desktop/hyprland
-    ./features/desktop/hyprland/laptop-scale.nix
+    ./features/desktop/hyprland/pantallas.nix
     ./features/desktop/common/optional/batsignal.nix
     ./features/desktop/common/optional/piper.nix
     ./features/desktop/common/optional/network.nix
@@ -33,18 +33,24 @@
 			# la Wacom (Intuos CTL-6100WL) entera sobre el monitor de arriba
 			input.tablet.output = "DP-1";
 
+			# los externos los acomoda hypr-pantallas (ver pantallas.monitores abajo);
+			# esta regla vale solo hasta que el vigía los ve
 			monitor = [
 				"eDP-1, 1920x1080, 0x0, 1"
-				# centrado encima del eDP (x=-192: (1536-1920)/2, eDP a 1.25); si el
-				# DP-1 está enchufado lo espeja y la posición no cuenta
-				"HDMI-A-1, 1920x1080@100, -192x-1080, 1, mirror, DP-1"
-				"DP-1, 1920x1080@180, 0x-1080, 1"
-				# x=1536: ancho lógico del eDP a 1.25 (hypr-laptop-scale)
-				"DP-2, 1920x1080, 1536x0, 1"
-				# por descripción (gana sobre el nombre del puerto); va a la
-				# derecha y solo llega a 120 Hz
-				"desc:ASR CL25FFA, 1920x1080@120, 1536x0, 1"
+				", preferred, auto, 1"
 			];
 	  };
   };
+
+  # lo de cada monitor hasta que se elija otra cosa en el menú (F7 o $mod+o)
+  pantallas.monitores = [
+	# por descripción primero (gana sobre el puerto, como desc: en Hyprland)
+	# el ASR solo llega a 120 Hz
+	{ desc = "ASR CL25FFA"; lugar = "derecha"; modo = "1920x1080@120"; }
+	# el KTC 27GR951 (por el dock o por HDMI); ofrece 200 Hz, va a 180
+	{ desc = "SAC LED MONITOR"; lugar = "arriba"; modo = "1920x1080@180"; }
+	# espeja el DP-1 si está; si no, centrado encima del eDP
+	{ puerto = "HDMI-A-1"; lugar = "arriba"; espejo = "DP-1"; modo = "1920x1080@100"; }
+	{ puerto = "DP-2"; lugar = "derecha"; }
+  ];
 }

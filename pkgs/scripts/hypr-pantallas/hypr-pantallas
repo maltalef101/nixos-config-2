@@ -1,0 +1,270 @@
+# Distribución de pantallas por estación. Una estación es el conjunto de
+# monitores externos enchufados (por descripción, que no cambia si el mismo
+# monitor llega por el dock USB-C o por el HDMI); para cada una se recuerda
+# dónde va cada externo respecto del panel (arriba, abajo, izquierda,
+# derecha, espejo de otro o apagado), su modo y si el panel queda prendido.
+#
+#   hypr-pantallas            menú de fuzzel: elegir y aplicar (y recordar)
+#   hypr-pantallas --vigilar  aplicar ahora y en cada enchufe/desenchufe
+#   hypr-pantallas --aplicar  aplicar una vez
+#   hypr-pantallas --plan     mostrar las reglas que aplicaría
+#
+# Qué vale para cada externo, en orden: lo elegido en el menú para esa
+# estación, lo declarado en ~/.config/hypr-pantallas/monitores.json (por
+# prefijo de descripción o por puerto; lo escribe home-manager) y, si no,
+# a la derecha con el modo máximo: la mayor resolución y, a esa resolución,
+# el mayor refresco (los modos de menos de 59 Hz solo si no hay otros).
+#
+# El panel pasa a 1.25 con algún externo prendido (157 vs 90 PPI,
+# compensado por la distancia) y vuelve a 1 solo; las posiciones van en
+# coordenadas lógicas, así que a su derecha se arranca en x=1536, no en 1920.
+# Los externos de un mismo lado forman una fila centrada contra el panel.
+#
+# Para probar sin Hyprland: HYPR_PANTALLAS_MONITORES=archivo.json (la salida
+# de `hyprctl monitors all -j`) con --plan.
+
+estado="${XDG_STATE_HOME:-$HOME/.local/state}/hypr-pantallas/estaciones.json"
+declarados="${XDG_CONFIG_HOME:-$HOME/.config}/hypr-pantallas/monitores.json"
+escalaPanelConExterno="1.25"
+
+read -r -d '' libJq <<'EOF' || true
+def dist($a; $b): if $a > $b then $a - $b else $b - $a end;
+def aModo: capture("^(?<w>[0-9]+)x(?<h>[0-9]+)(@(?<r>[0-9.]+))?")
+	| { w: (.w | tonumber), h: (.h | tonumber), r: (if .r then .r | tonumber else null end) };
+def texto: if . == null then "preferred" else "\(.w)x\(.h)@\(.r)" end;
+def legible: if . == null then "preferido" else "\(.w)x\(.h) a \(.r * 100 | round / 100) Hz" end;
+def esPanel: .name | startswith("eDP");
+# del mayor al menor: resolución y, a igual resolución, refresco; los de
+# menos de 59 Hz (el 4K a 30 de un HDMI 1.4) van al final
+def modos: [.availableModes[]? | aModo] | unique | sort_by(.r < 59, -(.w * .h), -.r);
+# el pedido ("1920x1080@180" o "1920x1080") entre los disponibles, o el máximo
+def elegirModo($pedido):
+	modos as $ms
+	| ([$pedido // "" | aModo] | .[0]) as $p
+	| if $p == null then $ms[0]
+	  else ([$ms[] | select(.w == $p.w and .h == $p.h)]
+		| if $p.r == null then . else map(select(dist(.r; $p.r) < 1)) | sort_by(dist(.r; $p.r)) end
+		| .[0]) // $ms[0]
+	  end;
+def estacion: [.[] | select(esPanel | not) | .description] | sort | join(" + ");
+def declarado($declarados): . as $m
+	| first($declarados[] | select(
+		(.desc != null and (.desc as $d | $m.description | startswith($d))) or (.puerto != null and .puerto == $m.name)
+	)) // {};
+# un lado: fila de izquierda a derecha, cada uno con su desplazamiento
+def fila: reduce .[] as $e ({ acc: 0, fila: [] }; .fila += [$e + { off: .acc }] | .acc += $e.dim.w);
+
+def plan($estado; $declarados; $escalaConExterno):
+	. as $mons
+	| ($mons | estacion) as $est
+	| ($estado[$est] // {}) as $guardada
+	| (first($mons[] | select(esPanel)) // null) as $panel
+	| ([$mons[] | select(esPanel | not)
+		| . as $m
+		| ($guardada.monitores[$m.description] // null) as $g
+		| (if $g != null then $g else declarado($declarados) end) as $pref
+		| elegirModo($pref.modo) as $modo
+		| {
+			name, description, make, model,
+			lugar: ($pref.lugar // "derecha"),
+			espejo: ($pref.espejo // null),
+			modoPedido: ($pref.modo // null),
+			modo: $modo,
+			maximo: (modos[0] // null),
+			dim: { w: ($modo.w // .width), h: ($modo.h // .height) }
+		}
+	  ] | sort_by(.name)) as $ext0
+	| (if $guardada | has("laptop") then $guardada.laptop else true end) as $laptopPedido
+	| ([$ext0[] | select(.lugar != "apagado")] | length) as $prendidos
+	| (($laptopPedido or $prendidos == 0) and $panel != null) as $laptop
+	| (if $prendidos > 0 then $escalaConExterno else 1 end) as $escala
+	| ($panel | if . then elegirModo(null) else null end) as $modoPanel
+	| (($modoPanel.w // 0) / $escala | floor) as $pw
+	| (($modoPanel.h // 0) / $escala | floor) as $ph
+	# a quién espeja cada uno: al panel o a otro externo que no espeje a nadie
+	| ($ext0 | map(. as $e
+		| .destino = (if .lugar == "apagado" or .espejo == null then null
+			elif .espejo == "laptop" then (if $laptop then $panel.name else null end)
+			else first($ext0[] | select(
+				.name != $e.name and .lugar != "apagado" and .espejo == null
+				and (.name == $e.espejo or (.description | startswith($e.espejo)))
+			) | .name) // null
+			end)
+		| if (.lugar | IN("arriba", "abajo", "izquierda", "derecha", "apagado")) then . else .lugar = "derecha" end
+	  )) as $ext1
+	| ([$ext1[] | select(.lugar != "apagado" and .destino == null)] | group_by(.lugar) | map(fila) | map(
+		.acc as $total | .fila[]
+		| if .lugar == "arriba" then .x = ((($pw - $total) / 2 | floor) + .off) | .y = -.dim.h
+		  elif .lugar == "abajo" then .x = ((($pw - $total) / 2 | floor) + .off) | .y = $ph
+		  elif .lugar == "izquierda" then .x = -(.off + .dim.w) | .y = (($ph - .dim.h) / 2 | floor)
+		  else .x = $pw + .off | .y = (($ph - .dim.h) / 2 | floor)
+		  end
+	  ) | flatten) as $ubicados
+	| ($ext1 | map(. as $e | (first($ubicados[] | select(.name == $e.name)) // $e))) as $ext
+	| {
+		estacion: $est,
+		laptop: $laptop,
+		laptopPedido: $laptopPedido,
+		guardada: ($estado | has($est)),
+		panel: (if $panel then { name: $panel.name, modo: $modoPanel, escala: $escala } else null end),
+		externos: $ext,
+		# primero lo que prende (el panel, los ubicados, los espejos, que
+		# necesitan el destino prendido) y al final lo que apaga, para que
+		# nunca quede ninguna salida
+		reglas: (
+			(if $laptop then ["\($panel.name), \($modoPanel | texto), 0x0, \($escala)"] else [] end)
+			+ [$ext[] | select(.lugar != "apagado" and .destino == null) | "\(.name), \(.modo | texto), \(.x)x\(.y), 1"]
+			+ [$ext[] | select(.destino != null) | "\(.name), \(.modo | texto), auto, 1, mirror, \(.destino)"]
+			+ [$ext[] | select(.lugar == "apagado") | "\(.name), disable"]
+			+ (if $panel != null and ($laptop | not) then ["\($panel.name), disable"] else [] end)
+		)
+	};
+
+# lo efectivo de la estación más la acción del menú: así la estación queda
+# fija entera, no solo el monitor que se tocó
+def guardar($plan; $accion):
+	if $accion.tipo == "olvidar" then del(.[$plan.estacion])
+	else .[$plan.estacion] = (
+		{
+			laptop: $plan.laptopPedido,
+			monitores: ($plan.externos | map({ key: .description, value: { lugar, espejo, modo: .modoPedido } }) | from_entries)
+		}
+		| if $accion.tipo == "lugar" then .monitores[$accion.desc] |= (.lugar = $accion.lugar | .espejo = null)
+		  elif $accion.tipo == "espejo" then .monitores[$accion.desc] |= (.espejo = $accion.de
+			| if .lugar == "apagado" then .lugar = "derecha" else . end)
+		  elif $accion.tipo == "modo" then .monitores[$accion.desc].modo = $accion.modo
+		  elif $accion.tipo == "laptop" then .laptop = $accion.valor
+		  else . end
+	) end;
+
+def marca($si): if $si then "● " else "   " end;
+def etiqueta: "\(.name) (\(.make) \(.model))";
+
+# el menú: [{texto, accion}]
+def entradas:
+	. as $p
+	| ($p.externos | length > 1) as $varios
+	| [$p.externos[] | . as $e
+		| (if $varios then "\(.name): " else "" end) as $pre
+		| (["arriba", "abajo", "izquierda", "derecha"][] as $l
+			| { texto: "\(marca($e.destino == null and $e.lugar == $l))\($pre)\($l) del laptop", accion: { tipo: "lugar", desc: $e.description, lugar: $l } }),
+		  (([{ name: $p.panel.name, clave: "laptop", et: "del laptop" }] + [$p.externos[] | select(.name != $e.name) | { name, clave: .description, et: "de \(etiqueta)" }])[]
+			| { texto: "\(marca($e.destino != null and $e.destino == .name))\($pre)espejo \(.et)", accion: { tipo: "espejo", desc: $e.description, de: .clave } }),
+		  { texto: "\(marca($e.lugar == "apagado"))\($pre)apagado", accion: { tipo: "lugar", desc: $e.description, lugar: "apagado" } },
+		  { texto: "   \($pre)modo: \($e.modo | legible) ›", accion: { tipo: "submenuModo", desc: $e.description } }
+	  ]
+	+ (if $p.panel == null then []
+	   elif $p.laptopPedido then [{ texto: "   apagar el laptop", accion: { tipo: "laptop", valor: false } }]
+	   else [{ texto: "   prender el laptop", accion: { tipo: "laptop", valor: true } }] end)
+	+ (if $p.guardada then [{ texto: "   olvidar esta estación (volver a lo de siempre)", accion: { tipo: "olvidar" } }] else [] end);
+
+def entradasModo($desc; $mons):
+	. as $p
+	| first($p.externos[] | select(.description == $desc)) as $e
+	| ($mons | first(.[] | select(.description == $desc)) | modos) as $ms
+	| [$ms | to_entries[] | .key as $i | .value
+		| { texto: "\(marca($e.modo == .))\(legible)\(if $i == 0 then "  (máximo)" else "" end)",
+			accion: { tipo: "modo", desc: $desc, modo: (if $i == 0 then null else texto end) } }];
+EOF
+
+monitores() {
+	if [ -n "${HYPR_PANTALLAS_MONITORES:-}" ]; then
+		cat "$HYPR_PANTALLAS_MONITORES"
+	else
+		hyprctl monitors all -j
+	fi
+}
+
+leer() { # $1 = archivo, $2 = vacío
+	if [ -s "$1" ]; then cat "$1"; else echo "$2"; fi
+}
+
+# $1 = json de monitores
+calcular() {
+	jq --argjson estado "$(leer "$estado" '{}')" \
+		--argjson declarados "$(leer "$declarados" '[]')" \
+		--argjson escala "$escalaPanelConExterno" \
+		"$libJq plan(\$estado; \$declarados; \$escala)" <<<"$1"
+}
+
+reglasDe() { # $1 = plan
+	jq -r '.reglas | map("keyword monitor " + .) | join(" ; ")' <<<"$1"
+}
+
+aplicarReglas() { # $1 = reglas en formato --batch
+	[ -n "$1" ] || return 0
+	hyprctl --batch "$1" >/dev/null
+}
+
+# $1 = json de entradas, $2 = prompt; imprime la acción elegida
+elegir() {
+	local n i
+	n=$(jq 'length' <<<"$1")
+	i=$(jq -r '.[].texto' <<<"$1" | fuzzel --dmenu --index --prompt "$2" --lines "$n" --width 48) || return 1
+	[ -n "$i" ] || return 1
+	jq -c --argjson i "$i" '.[$i].accion' <<<"$1"
+}
+
+menu() {
+	local mons plan accion
+	mons=$(monitores)
+	plan=$(calcular "$mons")
+	if [ "$(jq '.externos | length' <<<"$plan")" -eq 0 ]; then
+		notify-send -a hypr-pantallas "Pantallas" "No hay monitores externos." || true
+		return 0
+	fi
+
+	accion=$(elegir "$(jq -c "$libJq entradas" <<<"$plan")" "pantallas › ") || return 0
+	if [ "$(jq -r '.tipo' <<<"$accion")" = "submenuModo" ]; then
+		accion=$(elegir \
+			"$(jq -c --argjson mons "$mons" --arg desc "$(jq -r '.desc' <<<"$accion")" "$libJq entradasModo(\$desc; \$mons)" <<<"$plan")" \
+			"modo › ") || return 0
+	fi
+
+	mkdir -p "$(dirname "$estado")"
+	jq --argjson plan "$plan" --argjson accion "$accion" "$libJq guardar(\$plan; \$accion)" \
+		<<<"$(leer "$estado" '{}')" >"$estado.tmp"
+	mv "$estado.tmp" "$estado"
+
+	aplicarReglas "$(reglasDe "$(calcular "$mons")")"
+}
+
+vigilar() {
+	local ultimas reglas socket evento
+	ultimas=$(reglasDe "$(calcular "$(monitores)")")
+	aplicarReglas "$ultimas"
+
+	socket="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+	socat -U - UNIX-CONNECT:"$socket" | while IFS= read -r evento; do
+		case $evento in
+			# solo la variante v1 (la v2 llega igual y repetiría el trabajo).
+			# Prender o apagar un monitor desde acá también dispara estos
+			# eventos: si las reglas no cambiaron no se reaplican
+			monitoradded\>\>* | monitorremoved\>\>*)
+				sleep 0.5
+				reglas=$(reglasDe "$(calcular "$(monitores)")")
+				if [ "$reglas" != "$ultimas" ]; then
+					aplicarReglas "$reglas"
+					ultimas=$reglas
+				fi
+				;;
+			# el reload vuelve a las reglas estáticas: reaplicar siempre
+			configreloaded*)
+				sleep 0.5
+				ultimas=$(reglasDe "$(calcular "$(monitores)")")
+				aplicarReglas "$ultimas"
+				;;
+		esac
+	done
+}
+
+case "${1:-}" in
+	"") menu ;;
+	--vigilar) vigilar ;;
+	--aplicar) aplicarReglas "$(reglasDe "$(calcular "$(monitores)")")" ;;
+	--plan) calcular "$(monitores)" | jq -r '.reglas[]' ;;
+	*)
+		echo "uso: hypr-pantallas [--vigilar | --aplicar | --plan]" >&2
+		exit 1
+		;;
+esac
